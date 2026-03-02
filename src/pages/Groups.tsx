@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus, FolderOpen, Trash2 } from "lucide-react";
 
@@ -23,6 +23,7 @@ export default function Groups() {
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Group | null>(null);
 
   const fetchGroups = async () => {
     const { data } = await supabase.from("groups").select("*").order("created_at", { ascending: false });
@@ -51,13 +52,16 @@ export default function Groups() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("groups").delete().eq("id", id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("groups").delete().eq("id", deleteTarget.id);
     if (error) {
       toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
     } else {
+      toast({ title: "Group dihapus" });
       fetchGroups();
     }
+    setDeleteTarget(null);
   };
 
   return (
@@ -106,7 +110,7 @@ export default function Groups() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }}
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(g); }}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -121,6 +125,20 @@ export default function Groups() {
           ))}
         </div>
       )}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus Group "{deleteTarget?.name}"?</DialogTitle>
+            <DialogDescription>
+              Semua <strong>link share</strong> yang terkait group ini akan otomatis <strong>dinonaktifkan</strong> dan tidak bisa diakses lagi oleh publik. Data entry yang sudah masuk tetap tersimpan. Tindakan ini tidak bisa dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
+            <Button variant="destructive" onClick={handleDelete}>Hapus Group</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
