@@ -1,35 +1,64 @@
-
-
-## Plan: Filter Data per User & Perbaikan Komisi
+## Plan: Perbaiki UX Form & Komisi per Role
 
 ### Ringkasan
-1. Dashboard & GroupDetail: role non-super_admin hanya melihat data yang mereka input (`created_by = user.id`)
-2. Komisi: tambah kolom "Tanggal Cair" dan keterangan transfer yang lebih jelas
+
+1. **Sederhanakan DataEntryForm** — hapus dropdown "Hubungkan ke Akun UMKM" dari form utama. Pindahkan ke dialog terpisah di tabel entri (tombol kecil "Link UMKM") agar tidak membingungkan admin saat input data sehari-hari.
+2. **Komisi otomatis per aksi role** — modifikasi trigger database agar komisi dibuat bukan hanya saat INSERT, tapi juga saat role tertentu mengubah status (misal: role `nib` mengupload nib`` → dapat komisi sesuai tarif role `nib`).  
+komisi admin role input, saat status di ubah ke pengajuan oleh role tersebut dan juga di setujui oleh super admin  
+komisi admin lapangan otomatis terupdate saat nib terbit dan juga status sudah pengajuan
 
 ---
 
-### 1. Dashboard — Filter data milik sendiri
-**File: `src/pages/Dashboard.tsx`**
+### 1. DataEntryForm — Hapus Dropdown UMKM
 
-- `fetchStats`: untuk non-super_admin, query `data_entries` count ditambah `.eq("created_by", user.id)`
-- `fetchChartData`: kedua query `data_entries` (status & group) ditambah filter `.eq("created_by", user.id)` untuk non-super_admin
-- `fetchRecentEntries`: ditambah filter `.eq("created_by", user.id)` untuk non-super_admin
-- super_admin tetap melihat semua data
+**File: `src/components/DataEntryForm.tsx**`
 
-### 2. GroupDetail — Filter entri milik sendiri
-**File: `src/pages/GroupDetail.tsx`**
+- Hapus state `umkmUserId`, `umkmUsers`, dan useEffect fetch UMKM users
+- Hapus dropdown "Hubungkan ke Akun UMKM" dari JSX
+- Hapus logic `umkm_user_id` dari `handleSave` payload
 
-- `fetchEntries` (line ~109-128): untuk role selain `super_admin`, tambah `.eq("created_by", user.id)` pada query
-- Realtime subscription (line ~364-395): pada INSERT event, cek `payload.new.created_by === user.id` sebelum menambah ke state (untuk non-super_admin)
-- Ini memastikan lapangan/nib/admin_input hanya melihat data inputan sendiri dalam group
+### 2. Link UMKM dari Tabel Entri (Opsional)
 
-### 3. Komisi — Perbaikan UI
-**File: `src/pages/Komisi.tsx`**
+**File: `src/pages/GroupDetail.tsx**`
 
-- Tambah kolom "Tanggal Cair" di tabel riwayat, menampilkan `paid_at` yang diformat saat status = `paid`
-- Tambah info tanggal transfer terakhir pada card "Sudah Cair" (ambil `paid_at` terbaru dari komisi yang sudah paid)
-- Export CSV: tambah kolom "Tanggal Cair"
+- Tambahkan tombol kecil/icon di baris tabel entri (hanya visible untuk super_admin/admin) untuk membuka dialog kecil "Hubungkan ke UMKM"
+- Dialog berisi dropdown pilih akun UMKM + tombol simpan
+- Ini memisahkan proses input data dari proses linking akun
 
-### Tidak ada perubahan database
-Semua kolom yang dibutuhkan sudah ada. Hanya perubahan frontend.
+### 3. Komisi Otomatis saat Status Berubah (Database Trigger)
 
+**Migration SQL baru** — modifikasi/buat trigger `auto_create_commission_on_status_change`:
+
+```text
+Logika:
+- Saat status entry berubah (UPDATE), cek siapa yang mengubah (auth.uid())
+- Ambil role user tersebut
+- Ambil tarif komisi untuk role tersebut dari commission_rates
+- Jika tarif > 0 dan belum ada komisi untuk user+entry ini, buat record komisi baru
+- Ini berarti:
+  - Lapangan dapat komisi saat membuat data baru (trigger INSERT sudah ada)
+  - NIB dapat komisi saat mengubah status (misal ke ktp_terdaftar_nib)
+  - Admin Input dapat komisi saat mengubah status (misal ke nib_selesai)
+```
+
+Trigger akan memastikan **satu user hanya dapat satu komisi per entry** (cek duplikat `user_id + entry_id`).
+
+### 4. Tidak Ada Perubahan di AppSettings
+
+Tab Komisi di pengaturan sudah mendukung setting tarif per role. Tidak perlu perubahan.
+
+---
+
+### Detail Teknis
+
+**Trigger SQL baru (`auto_create_commission_on_status_change`)**:
+
+- Event: `AFTER UPDATE ON data_entries`
+- Condition: `OLD.status IS DISTINCT FROM NEW.status`
+- Logic: get `auth.uid()` → get role → get rate → insert commission if rate > 0 and no duplicate
+
+**Perubahan file**:
+
+1. `src/components/DataEntryForm.tsx` — hapus bagian UMKM (lines 90-91, 96-111, 337-354, 199-200)
+2. `src/pages/GroupDetail.tsx` — tambah dialog link UMKM di tabel
+3. Migration SQL — trigger komisi on status change
