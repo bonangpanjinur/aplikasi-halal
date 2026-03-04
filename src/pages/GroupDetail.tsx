@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award, AlertTriangle } from "lucide-react";
+import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award, AlertTriangle, Link2 } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import PhotoGallery from "@/components/PhotoGallery";
 import type { Tables, Enums } from "@/integrations/supabase/types";
@@ -65,6 +65,13 @@ export default function GroupDetail() {
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<{ id: string; email: string | null; full_name: string | null }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
+
+  // Link UMKM dialog state
+  const [linkUmkmOpen, setLinkUmkmOpen] = useState(false);
+  const [linkUmkmEntryId, setLinkUmkmEntryId] = useState<string | null>(null);
+  const [umkmUsers, setUmkmUsers] = useState<{ id: string; full_name: string | null; email: string | null }[]>([]);
+  const [selectedUmkmUserId, setSelectedUmkmUserId] = useState("");
+  const [linkingUmkm, setLinkingUmkm] = useState(false);
 
   // Audit log state
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
@@ -188,6 +195,38 @@ export default function GroupDetail() {
     const { data: existing } = await supabase.from("group_members").select("user_id").eq("group_id", groupId ?? "");
     const existingIds = new Set(existing?.map((e) => e.user_id));
     setAvailableUsers((profiles ?? []).filter((p) => !existingIds.has(p.id)));
+  };
+  const fetchUmkmUsers = async () => {
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "umkm" as any);
+    if (!roles?.length) { setUmkmUsers([]); return; }
+    const userIds = roles.map((r) => r.user_id);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", userIds);
+    setUmkmUsers(profiles ?? []);
+  };
+
+  const handleLinkUmkm = async () => {
+    if (!linkUmkmEntryId) return;
+    setLinkingUmkm(true);
+    const { error } = await supabase
+      .from("data_entries")
+      .update({ umkm_user_id: selectedUmkmUserId || null } as any)
+      .eq("id", linkUmkmEntryId);
+    setLinkingUmkm(false);
+    if (error) {
+      toast({ title: "Gagal menghubungkan", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Berhasil dihubungkan ke akun UMKM" });
+      setEntries((prev) => prev.map((e) => e.id === linkUmkmEntryId ? { ...e, umkm_user_id: selectedUmkmUserId || null } as any : e));
+      setLinkUmkmOpen(false);
+      setLinkUmkmEntryId(null);
+      setSelectedUmkmUserId("");
+    }
   };
 
   useEffect(() => {
@@ -629,6 +668,21 @@ export default function GroupDetail() {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
+                                {(role === "super_admin" || role === "admin") && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setLinkUmkmEntryId(e.id);
+                                      setSelectedUmkmUserId((e as any).umkm_user_id || "");
+                                      setLinkUmkmOpen(true);
+                                      fetchUmkmUsers();
+                                    }}
+                                    title="Hubungkan ke akun UMKM"
+                                  >
+                                    <Link2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 {canDownload && (
                                   <Button
                                     variant="ghost"
@@ -810,6 +864,29 @@ export default function GroupDetail() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Link UMKM Dialog */}
+      <Dialog open={linkUmkmOpen} onOpenChange={(o) => { setLinkUmkmOpen(o); if (!o) { setLinkUmkmEntryId(null); setSelectedUmkmUserId(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Hubungkan ke Akun UMKM</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Select value={selectedUmkmUserId || "__none__"} onValueChange={(v) => setSelectedUmkmUserId(v === "__none__" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Pilih akun UMKM..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Tidak ada —</SelectItem>
+                {umkmUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.full_name || u.email || u.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button className="w-full" onClick={handleLinkUmkm} disabled={linkingUmkm}>
+              {linkingUmkm ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
