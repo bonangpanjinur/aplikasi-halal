@@ -1,64 +1,112 @@
-## Plan: Perbaiki UX Form & Komisi per Role
 
-### Ringkasan
 
-1. **Sederhanakan DataEntryForm** — hapus dropdown "Hubungkan ke Akun UMKM" dari form utama. Pindahkan ke dialog terpisah di tabel entri (tombol kecil "Link UMKM") agar tidak membingungkan admin saat input data sehari-hari.
-2. **Komisi otomatis per aksi role** — modifikasi trigger database agar komisi dibuat bukan hanya saat INSERT, tapi juga saat role tertentu mengubah status (misal: role `nib` mengupload nib`` → dapat komisi sesuai tarif role `nib`).  
-komisi admin role input, saat status di ubah ke pengajuan oleh role tersebut dan juga di setujui oleh super admin  
-komisi admin lapangan otomatis terupdate saat nib terbit dan juga status sudah pengajuan
+## Analisis Lengkap: Bug, Perbaikan UX, dan Kebutuhan Fitur
 
----
+### A. Bug dan Masalah yang Ditemukan
 
-### 1. DataEntryForm — Hapus Dropdown UMKM
+#### 1. DataEntryForm - `useState` digunakan salah untuk side-effect (line 115-127)
+`useState(() => { ... })` digunakan untuk fetch data existing photos. Ini harusnya `useEffect`. Ini bisa menyebabkan foto tidak dimuat ulang saat entry berubah.
 
-**File: `src/components/DataEntryForm.tsx**`
+#### 2. GroupDetail - Realtime UPDATE tidak difilter per user
+Pada realtime subscription, event UPDATE dan DELETE tidak difilter berdasarkan `created_by` untuk non-super_admin. Jika user lain mengupdate entry di group yang sama, entry tersebut bisa muncul tiba-tiba di state user lain.
 
-- Hapus state `umkmUserId`, `umkmUsers`, dan useEffect fetch UMKM users
-- Hapus dropdown "Hubungkan ke Akun UMKM" dari JSX
-- Hapus logic `umkm_user_id` dari `handleSave` payload
+#### 3. Dashboard - Chart hanya ditampilkan untuk super_admin/admin
+Line 296: `(role === "super_admin" || role === "admin")` menyembunyikan chart untuk role `lapangan`, `nib`, `admin_input`. Padahal mereka bisa melihat ringkasan data mereka sendiri dalam bentuk chart.
 
-### 2. Link UMKM dari Tabel Entri (Opsional)
+#### 4. AppLayout - Sidebar menampilkan "HalalTrack" hardcoded
+Meskipun ada setting `app_name` di AppSettings, sidebar masih menampilkan "HalalTrack" hardcoded (line 103, 164). Seharusnya fetch dari `app_settings`.
 
-**File: `src/pages/GroupDetail.tsx**`
+#### 5. AppSettings - Simpan commission_rates menggunakan UPDATE tanpa INSERT
+Jika role belum ada di tabel `commission_rates`, UPDATE tidak akan melakukan apa-apa. Seharusnya gunakan UPSERT.
 
-- Tambahkan tombol kecil/icon di baris tabel entri (hanya visible untuk super_admin/admin) untuk membuka dialog kecil "Hubungkan ke UMKM"
-- Dialog berisi dropdown pilih akun UMKM + tombol simpan
-- Ini memisahkan proses input data dari proses linking akun
+#### 6. AppSettings - Simpan field_access juga hanya UPDATE
+Sama seperti commission_rates, jika row belum ada di `field_access`, UPDATE tidak menyimpan perubahan baru.
 
-### 3. Komisi Otomatis saat Status Berubah (Database Trigger)
+#### 7. Komisi - Admin bisa "Cairkan" tapi tidak ada konfirmasi
+Tombol "Cairkan Semua Pending" langsung mengeksekusi tanpa dialog konfirmasi. Ini berbahaya karena bisa mengubah banyak data sekaligus.
 
-**Migration SQL baru** — modifikasi/buat trigger `auto_create_commission_on_status_change`:
-
-```text
-Logika:
-- Saat status entry berubah (UPDATE), cek siapa yang mengubah (auth.uid())
-- Ambil role user tersebut
-- Ambil tarif komisi untuk role tersebut dari commission_rates
-- Jika tarif > 0 dan belum ada komisi untuk user+entry ini, buat record komisi baru
-- Ini berarti:
-  - Lapangan dapat komisi saat membuat data baru (trigger INSERT sudah ada)
-  - NIB dapat komisi saat mengubah status (misal ke ktp_terdaftar_nib)
-  - Admin Input dapat komisi saat mengubah status (misal ke nib_selesai)
-```
-
-Trigger akan memastikan **satu user hanya dapat satu komisi per entry** (cek duplikat `user_id + entry_id`).
-
-### 4. Tidak Ada Perubahan di AppSettings
-
-Tab Komisi di pengaturan sudah mendukung setting tarif per role. Tidak perlu perubahan.
+#### 8. UsersManagement - Hapus user tanpa konfirmasi
+Tombol delete langsung memanggil `handleDelete` tanpa dialog konfirmasi.
 
 ---
 
-### Detail Teknis
+### B. Perbaikan UX yang Dibutuhkan
 
-**Trigger SQL baru (`auto_create_commission_on_status_change`)**:
+#### 1. Dashboard per Role lebih informatif
+- **Lapangan**: Tampilkan jumlah data yang di-input hari ini, minggu ini, bulan ini. Tampilkan progress bar target (jika ada).
+- **NIB**: Tampilkan antrian data yang perlu di-proses NIB-nya (status `siap_input`).
+- **Admin Input**: Tampilkan data yang perlu di-input (status `siap_input`).
+- Semua role: Tampilkan chart status masing-masing, bukan hanya super_admin/admin.
 
-- Event: `AFTER UPDATE ON data_entries`
-- Condition: `OLD.status IS DISTINCT FROM NEW.status`
-- Logic: get `auth.uid()` → get role → get rate → insert commission if rate > 0 and no duplicate
+#### 2. GroupDetail - Tampilan tabel tidak responsive
+Tabel entri bisa sangat lebar di mobile. Perlu scroll horizontal yang lebih jelas atau card view untuk mobile.
 
-**Perubahan file**:
+#### 3. ShareLinks - Tidak ada statistik per link
+Admin/lapangan tidak tahu berapa banyak data yang masuk dari setiap share link. Perlu counter "X data masuk via link ini".
 
-1. `src/components/DataEntryForm.tsx` — hapus bagian UMKM (lines 90-91, 96-111, 337-354, 199-200)
-2. `src/pages/GroupDetail.tsx` — tambah dialog link UMKM di tabel
-3. Migration SQL — trigger komisi on status change
+#### 4. Profile - Tidak menampilkan role user
+Halaman profile tidak menunjukkan role user saat ini.
+
+#### 5. Public Form - Tidak ada loading state saat submit
+Form publik tidak menampilkan loading indicator saat data sedang dikirim.
+
+---
+
+### C. Fitur yang Dibutuhkan
+
+#### Untuk Admin (super_admin/admin)
+
+1. **Dashboard ringkasan kinerja per admin**
+   - Super admin bisa melihat berapa banyak data yang diinput oleh masing-masing admin lapangan dalam periode tertentu.
+   - Ranking/leaderboard admin berdasarkan jumlah input.
+
+2. **Notifikasi untuk admin**
+   - Saat data baru masuk via share link, admin yang membuat link mendapat notifikasi.
+   - Saat status berubah, admin terkait mendapat notifikasi.
+
+3. **Bulk edit/delete entries**
+   - Bulk delete sudah bisa di-support tapi belum ada tombolnya.
+   - Bulk assign PIC ke entry tertentu.
+
+4. **Export data lebih lengkap**
+   - Export dengan foto (ZIP) sudah ada, tapi export CSV belum menyertakan tracking code dan nama PIC.
+
+5. **Statistik share link**
+   - Jumlah klik dan data yang masuk per share link.
+
+6. **Log aktivitas global**
+   - Super admin bisa melihat semua audit log lintas group, bukan hanya per group.
+
+#### Untuk UMKM
+
+1. **Progress timeline/tracker visual**
+   - Tampilkan timeline visual dari proses sertifikasi (belum lengkap → siap input → ... → sertifikat selesai), bukan hanya badge status.
+
+2. **Download dokumen sendiri**
+   - UMKM bisa download NIB dan sertifikat halal mereka langsung dari dashboard.
+
+3. **Hubungi petugas**
+   - Tombol WhatsApp/kontak langsung ke petugas lapangan yang menangani data mereka.
+
+4. **Riwayat perubahan status**
+   - UMKM bisa melihat kapan status mereka berubah dan oleh siapa.
+
+---
+
+### D. Prioritas Implementasi yang Disarankan
+
+| Prioritas | Item | Kategori |
+|-----------|------|----------|
+| Tinggi | Fix useState → useEffect di DataEntryForm | Bug |
+| Tinggi | Fix realtime filter di GroupDetail | Bug |
+| Tinggi | Konfirmasi sebelum cairkan komisi & hapus user | UX |
+| Tinggi | Fetch app_name & logo di sidebar | Bug |
+| Sedang | Chart untuk semua role di Dashboard | UX |
+| Sedang | Upsert untuk commission_rates & field_access | Bug |
+| Sedang | Progress timeline untuk UMKM | Fitur |
+| Sedang | Statistik per share link | Fitur |
+| Sedang | Dashboard kinerja admin untuk super_admin | Fitur |
+| Rendah | Notifikasi admin | Fitur |
+| Rendah | Export CSV lebih lengkap | Fitur |
+| Rendah | Kontak petugas untuk UMKM | Fitur |
+
