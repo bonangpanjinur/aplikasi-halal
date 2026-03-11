@@ -75,7 +75,7 @@ export default function AppSettings() {
   const [newBillingType, setNewBillingType] = useState("per_sertifikat");
   const [newBillingAmount, setNewBillingAmount] = useState(0);
   const [savingBilling, setSavingBilling] = useState(false);
-
+  const [newTrialDays, setNewTrialDays] = useState(7);
   const isSuperAdmin = role === "super_admin";
   const isOwner = role === "owner";
 
@@ -256,6 +256,8 @@ export default function AppSettings() {
       owner_user_id: newBillingOwner,
       billing_type: newBillingType,
       amount: newBillingAmount,
+      trial_days: newTrialDays,
+      trial_start: new Date().toISOString(),
     } as any);
     setSavingBilling(false);
     if (error) {
@@ -284,15 +286,21 @@ export default function AppSettings() {
           <TabsTrigger value="tampilan" className="flex-1 gap-2">
             <Palette className="h-4 w-4" /> Tampilan
           </TabsTrigger>
-          <TabsTrigger value="akses" className="flex-1 gap-2">
-            <ShieldCheck className="h-4 w-4" /> Hak Akses
-          </TabsTrigger>
-          <TabsTrigger value="siap_input" className="flex-1 gap-2">
-            <ClipboardCheck className="h-4 w-4" /> Siap Input
-          </TabsTrigger>
-          <TabsTrigger value="komisi" className="flex-1 gap-2">
-            <Wallet className="h-4 w-4" /> Komisi
-          </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="akses" className="flex-1 gap-2">
+              <ShieldCheck className="h-4 w-4" /> Hak Akses
+            </TabsTrigger>
+          )}
+          {isOwner && (
+            <TabsTrigger value="siap_input" className="flex-1 gap-2">
+              <ClipboardCheck className="h-4 w-4" /> Siap Input
+            </TabsTrigger>
+          )}
+          {isOwner && (
+            <TabsTrigger value="komisi" className="flex-1 gap-2">
+              <Wallet className="h-4 w-4" /> Komisi
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="tampilan" className="space-y-6 mt-4">
@@ -548,7 +556,7 @@ export default function AppSettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-4 items-end">
+                <div className="grid gap-3 sm:grid-cols-5 items-end">
                   <div className="space-y-1">
                     <Label className="text-xs">Owner</Label>
                     <Select value={newBillingOwner} onValueChange={setNewBillingOwner}>
@@ -582,6 +590,16 @@ export default function AppSettings() {
                       className="font-mono"
                     />
                   </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Trial (hari)</Label>
+                    <Input
+                      type="number"
+                      value={newTrialDays}
+                      onChange={(e) => setNewTrialDays(parseInt(e.target.value) || 7)}
+                      min={0}
+                      className="font-mono"
+                    />
+                  </div>
                   <Button onClick={handleSaveBilling} disabled={savingBilling || !newBillingOwner}>
                     {savingBilling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
                     Tambah
@@ -596,12 +614,15 @@ export default function AppSettings() {
                         <TableHead>Jenis</TableHead>
                         <TableHead>Tarif</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Trial</TableHead>
                         <TableHead>Tanggal</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {billingRecords.map((b: any) => {
                         const ownerProfile = ownerUsers.find((u) => u.id === b.owner_user_id);
+                        const trialEnd = b.trial_start ? new Date(new Date(b.trial_start).getTime() + (b.trial_days ?? 7) * 86400000) : null;
+                        const trialRemaining = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null;
                         return (
                           <TableRow key={b.id}>
                             <TableCell className="font-medium">{ownerProfile?.full_name || ownerProfile?.email || b.owner_user_id.slice(0, 8)}</TableCell>
@@ -609,6 +630,15 @@ export default function AppSettings() {
                             <TableCell className="font-mono">Rp {b.amount?.toLocaleString("id-ID")}</TableCell>
                             <TableCell>
                               <Badge variant={b.status === "active" ? "default" : "secondary"}>{b.status}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {trialRemaining !== null ? (
+                                <Badge variant={trialRemaining > 0 ? "outline" : "destructive"}>
+                                  {trialRemaining > 0 ? `${trialRemaining} hari tersisa` : "Expired"}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("id-ID")}</TableCell>
                           </TableRow>
