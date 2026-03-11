@@ -271,8 +271,13 @@ export default function AppSettings() {
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-2xl font-bold">Pengaturan</h1>
 
-      <Tabs defaultValue="tampilan">
+      <Tabs defaultValue={isSuperAdmin ? "billing" : "tampilan"}>
         <TabsList className="w-full flex-wrap">
+          {isSuperAdmin && (
+            <TabsTrigger value="billing" className="flex-1 gap-2">
+              <CreditCard className="h-4 w-4" /> Billing Platform
+            </TabsTrigger>
+          )}
           <TabsTrigger value="tampilan" className="flex-1 gap-2">
             <Palette className="h-4 w-4" /> Tampilan
           </TabsTrigger>
