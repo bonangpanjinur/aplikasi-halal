@@ -125,6 +125,20 @@ export default function Dashboard() {
   const [groupData, setGroupData] = useState<GroupStat[]>([]);
   const [recentEntries, setRecentEntries] = useState<DataEntry[]>([]);
 
+  // Financial state (super_admin)
+  const [financeStats, setFinanceStats] = useState({
+    totalBilling: 0,
+    activeBilling: 0,
+    totalCommissions: 0,
+    pendingCommissions: 0,
+    paidCommissions: 0,
+    totalDisbursements: 0,
+    pendingDisbursements: 0,
+    approvedDisbursements: 0,
+  });
+  const [billingData, setBillingData] = useState<any[]>([]);
+  const [commissionByRole, setCommissionByRole] = useState<{ role: string; amount: number }[]>([]);
+
   const visibleFields = fields.filter((f) => f.can_view);
 
   useEffect(() => {
