@@ -141,7 +141,7 @@ export default function Dashboard() {
       let usersCount = 0;
       let linksCount = 0;
 
-      if (role === "super_admin") {
+      if (role === "super_admin" || role === "owner") {
         const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true });
         usersCount = count ?? 0;
       }
