@@ -87,6 +87,8 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const [nama, setNama] = useState(entry?.nama ?? "");
   const [alamat, setAlamat] = useState(entry?.alamat ?? "");
   const [nomorHp, setNomorHp] = useState(entry?.nomor_hp ?? "");
+  const [email, setEmail] = useState((entry as any)?.email ?? "");
+  const [kataSandi, setKataSandi] = useState((entry as any)?.kata_sandi ?? "");
   const [saving, setSaving] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
 
