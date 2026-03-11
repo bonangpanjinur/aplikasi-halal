@@ -524,7 +524,7 @@ export default function AppSettings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {ROLES.map((r) => (
+              {ALL_ROLES.map((r) => (
                 <div key={r.key} className="flex items-center justify-between rounded-lg border p-3">
                   <span className="text-sm font-medium">{r.label}</span>
                   <div className="flex items-center gap-2">
