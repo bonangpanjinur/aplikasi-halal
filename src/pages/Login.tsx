@@ -69,7 +69,7 @@ export default function Login() {
             <Link to="/register">
               <Button variant="secondary" size="sm" className="w-full gap-2 mb-2">
                 <Store className="h-3.5 w-3.5" />
-                Daftar Akun UMKM
+                Daftar Akun UMKM/SPPG
               </Button>
             </Link>
             <p className="text-xs text-muted-foreground">Punya kode tracking sertifikat?</p>

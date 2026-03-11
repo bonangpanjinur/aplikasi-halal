@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Store, ArrowRight, ArrowLeft } from "lucide-react";
+import { Store, ArrowRight } from "lucide-react";
 
 export default function Register() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -21,7 +22,25 @@ export default function Register() {
       toast({ title: "Password minimal 6 karakter", variant: "destructive" });
       return;
     }
+
     setLoading(true);
+
+    // Validate referral code if provided
+    let picUserId: string | null = null;
+    if (referralCode.trim()) {
+      const { data: refProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("referral_code" as any, referralCode.trim().toUpperCase())
+        .single();
+      if (!refProfile) {
+        toast({ title: "Kode referral tidak valid", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      picUserId = refProfile.id;
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -29,6 +48,8 @@ export default function Register() {
         data: {
           full_name: fullName,
           register_as: "umkm",
+          referral_code: referralCode.trim().toUpperCase() || null,
+          pic_user_id: picUserId,
         },
       },
     });
@@ -49,7 +70,7 @@ export default function Register() {
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-md">
             <Store className="h-7 w-7 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Daftar UMKM</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">Daftar Akun UMKM/SPPG</CardTitle>
           <CardDescription>Buat akun untuk memantau status sertifikasi Anda</CardDescription>
         </CardHeader>
         <CardContent>
@@ -85,6 +106,17 @@ export default function Register() {
                 placeholder="Minimal 6 karakter"
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="referral">Kode Referral (opsional)</Label>
+              <Input
+                id="referral"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                placeholder="Masukkan kode referral"
+                className="font-mono uppercase"
+              />
+              <p className="text-xs text-muted-foreground">Jika tidak ada, PIC akan di-set ke pusat</p>
             </div>
             <Button type="submit" className="w-full gap-2" disabled={loading}>
               {loading ? "Memproses..." : <>Daftar <ArrowRight className="h-4 w-4" /></>}
