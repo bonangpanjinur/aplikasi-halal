@@ -419,6 +419,8 @@ export type Database = {
           notes: string | null
           owner_user_id: string
           status: string
+          trial_days: number
+          trial_start: string | null
           updated_at: string
         }
         Insert: {
@@ -429,6 +431,8 @@ export type Database = {
           notes?: string | null
           owner_user_id: string
           status?: string
+          trial_days?: number
+          trial_start?: string | null
           updated_at?: string
         }
         Update: {
@@ -439,6 +443,8 @@ export type Database = {
           notes?: string | null
           owner_user_id?: string
           status?: string
+          trial_days?: number
+          trial_start?: string | null
           updated_at?: string
         }
         Relationships: []

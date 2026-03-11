@@ -284,15 +284,21 @@ export default function AppSettings() {
           <TabsTrigger value="tampilan" className="flex-1 gap-2">
             <Palette className="h-4 w-4" /> Tampilan
           </TabsTrigger>
-          <TabsTrigger value="akses" className="flex-1 gap-2">
-            <ShieldCheck className="h-4 w-4" /> Hak Akses
-          </TabsTrigger>
-          <TabsTrigger value="siap_input" className="flex-1 gap-2">
-            <ClipboardCheck className="h-4 w-4" /> Siap Input
-          </TabsTrigger>
-          <TabsTrigger value="komisi" className="flex-1 gap-2">
-            <Wallet className="h-4 w-4" /> Komisi
-          </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="akses" className="flex-1 gap-2">
+              <ShieldCheck className="h-4 w-4" /> Hak Akses
+            </TabsTrigger>
+          )}
+          {isOwner && (
+            <TabsTrigger value="siap_input" className="flex-1 gap-2">
+              <ClipboardCheck className="h-4 w-4" /> Siap Input
+            </TabsTrigger>
+          )}
+          {isOwner && (
+            <TabsTrigger value="komisi" className="flex-1 gap-2">
+              <Wallet className="h-4 w-4" /> Komisi
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="tampilan" className="space-y-6 mt-4">
