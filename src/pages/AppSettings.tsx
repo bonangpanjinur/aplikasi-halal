@@ -58,11 +58,23 @@ export default function AppSettings() {
   // Commission rates
   const [rates, setRates] = useState<Record<string, number>>({
     super_admin: 0,
+    owner: 0,
     admin: 5000,
     admin_input: 0,
     lapangan: 10000,
     nib: 5000,
   });
+
+  // Platform billing state (super_admin only)
+  const [billingRecords, setBillingRecords] = useState<any[]>([]);
+  const [ownerUsers, setOwnerUsers] = useState<{ id: string; full_name: string | null; email: string | null }[]>([]);
+  const [newBillingOwner, setNewBillingOwner] = useState("");
+  const [newBillingType, setNewBillingType] = useState("per_sertifikat");
+  const [newBillingAmount, setNewBillingAmount] = useState(0);
+  const [savingBilling, setSavingBilling] = useState(false);
+
+  const isSuperAdmin = role === "super_admin";
+  const isOwner = role === "owner";
 
   const { allAccess, loading: accessLoading, refetch: refetchAccess } = useAllFieldAccess();
 
