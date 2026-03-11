@@ -179,7 +179,7 @@ export default function Dashboard() {
       }
 
       let groupQuery = supabase.from("data_entries").select("group_id, groups(name)");
-      if (!isSuperAdmin && user) groupQuery = groupQuery.eq("created_by", user.id);
+      if (!isFullAccess && user) groupQuery = groupQuery.eq("created_by", user.id);
       const { data: entryGroups } = await groupQuery;
       if (entryGroups) {
         const groupCounts: Record<string, { name: string; count: number }> = {};
