@@ -25,10 +25,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS = {
   super_admin: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { label: "Kelola User", icon: Users, path: "/users" },
-    { label: "Group Halal", icon: FolderOpen, path: "/groups" },
-    { label: "Share Link", icon: Link2, path: "/share" },
-    { label: "Komisi", icon: Wallet, path: "/komisi" },
+    { label: "Kelola Owner", icon: Users, path: "/users" },
     { label: "Pengaturan", icon: Settings, path: "/settings" },
   ],
   owner: [
