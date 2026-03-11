@@ -161,9 +161,9 @@ export default function Dashboard() {
     };
 
     const fetchChartData = async () => {
-      const isSuperAdmin = role === "super_admin";
+      const isFullAccess = role === "super_admin" || role === "owner";
       let statusQuery = supabase.from("data_entries").select("status");
-      if (!isSuperAdmin && user) statusQuery = statusQuery.eq("created_by", user.id);
+      if (!isFullAccess && user) statusQuery = statusQuery.eq("created_by", user.id);
       const { data: entries } = await statusQuery;
       if (entries) {
         const counts: Record<string, number> = {};
