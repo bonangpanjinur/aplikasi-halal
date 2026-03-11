@@ -129,9 +129,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const isSuperAdmin = role === "super_admin";
+      const isFullAccess = role === "super_admin" || role === "owner";
       let entriesQuery = supabase.from("data_entries").select("id", { count: "exact", head: true });
-      if (!isSuperAdmin && user) entriesQuery = entriesQuery.eq("created_by", user.id);
+      if (!isFullAccess && user) entriesQuery = entriesQuery.eq("created_by", user.id);
 
       const [groupsRes, entriesRes] = await Promise.all([
         supabase.from("groups").select("id", { count: "exact", head: true }),
@@ -141,7 +141,7 @@ export default function Dashboard() {
       let usersCount = 0;
       let linksCount = 0;
 
-      if (role === "super_admin") {
+      if (role === "super_admin" || role === "owner") {
         const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true });
         usersCount = count ?? 0;
       }
@@ -161,9 +161,9 @@ export default function Dashboard() {
     };
 
     const fetchChartData = async () => {
-      const isSuperAdmin = role === "super_admin";
+      const isFullAccess = role === "super_admin" || role === "owner";
       let statusQuery = supabase.from("data_entries").select("status");
-      if (!isSuperAdmin && user) statusQuery = statusQuery.eq("created_by", user.id);
+      if (!isFullAccess && user) statusQuery = statusQuery.eq("created_by", user.id);
       const { data: entries } = await statusQuery;
       if (entries) {
         const counts: Record<string, number> = {};
@@ -179,7 +179,7 @@ export default function Dashboard() {
       }
 
       let groupQuery = supabase.from("data_entries").select("group_id, groups(name)");
-      if (!isSuperAdmin && user) groupQuery = groupQuery.eq("created_by", user.id);
+      if (!isFullAccess && user) groupQuery = groupQuery.eq("created_by", user.id);
       const { data: entryGroups } = await groupQuery;
       if (entryGroups) {
         const groupCounts: Record<string, { name: string; count: number }> = {};
@@ -193,13 +193,13 @@ export default function Dashboard() {
     };
 
     const fetchRecentEntries = async () => {
-      const isSuperAdmin = role === "super_admin";
+      const isFullAccess = role === "super_admin" || role === "owner";
       let recentQuery = supabase
         .from("data_entries")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(10);
-      if (!isSuperAdmin && user) recentQuery = recentQuery.eq("created_by", user.id);
+      if (!isFullAccess && user) recentQuery = recentQuery.eq("created_by", user.id);
       const { data } = await recentQuery;
       setRecentEntries(data ?? []);
     };
@@ -212,7 +212,7 @@ export default function Dashboard() {
   const cards = [
     { label: "Group Halal", value: stats.groups, icon: FolderOpen, show: true },
     { label: "Data Entri", value: stats.entries, icon: FileText, show: true },
-    { label: "Total User", value: stats.users, icon: Users, show: role === "super_admin" },
+    { label: "Total User", value: stats.users, icon: Users, show: role === "super_admin" || role === "owner" },
     { label: "Link Aktif", value: stats.links, icon: Link2, show: true },
   ];
 

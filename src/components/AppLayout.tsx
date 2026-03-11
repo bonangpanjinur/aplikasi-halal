@@ -31,6 +31,14 @@ const NAV_ITEMS = {
     { label: "Komisi", icon: Wallet, path: "/komisi" },
     { label: "Pengaturan", icon: Settings, path: "/settings" },
   ],
+  owner: [
+    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { label: "Kelola User", icon: Users, path: "/users" },
+    { label: "Group Halal", icon: FolderOpen, path: "/groups" },
+    { label: "Share Link", icon: Link2, path: "/share" },
+    { label: "Komisi", icon: Wallet, path: "/komisi" },
+    { label: "Pengaturan", icon: Settings, path: "/settings" },
+  ],
   admin: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
@@ -112,7 +120,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   if (isMobile) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
-        {/* Top bar */}
         <header className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
             {logoUrl ? (
@@ -137,11 +144,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 )}
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            >
+            <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
@@ -149,11 +152,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </Button>
           </div>
         </header>
-
-        {/* Content - add padding bottom for sticky nav */}
         <main className="flex-1 overflow-auto p-4 pb-20">{children}</main>
-
-        {/* Sticky Bottom nav */}
         <nav className="fixed bottom-0 left-0 right-0 z-50 flex border-t bg-background shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
           {items.map((item) => (
             <button
@@ -161,9 +160,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => navigate(item.path)}
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 py-2.5 text-xs transition-colors",
-                location.pathname === item.path
-                  ? "text-primary font-medium"
-                  : "text-muted-foreground"
+                location.pathname === item.path ? "text-primary font-medium" : "text-muted-foreground"
               )}
             >
               <item.icon className={cn("h-5 w-5", location.pathname === item.path && "scale-110")} />
@@ -177,7 +174,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
       <aside className="flex w-56 flex-col border-r bg-sidebar-background">
         <div className="flex items-center gap-2.5 border-b px-4 py-4">
           {logoUrl ? (
@@ -215,17 +211,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <div className="text-xs font-medium capitalize">{role?.replace("_", " ")}</div>
             </div>
           </button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start mb-1"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? (
-              <Sun className="mr-2 h-4 w-4" />
-            ) : (
-              <Moon className="mr-2 h-4 w-4" />
-            )}
+          <Button variant="ghost" size="sm" className="w-full justify-start mb-1" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+            {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
             {theme === "dark" ? "Mode Terang" : "Mode Gelap"}
           </Button>
           <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut}>
@@ -234,8 +221,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </Button>
         </div>
       </aside>
-
-      {/* Main content */}
       <main className="flex-1 overflow-auto p-6">{children}</main>
     </div>
   );

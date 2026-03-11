@@ -7,8 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, Wallet, ClipboardCheck } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, Wallet, ClipboardCheck, CreditCard, Plus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAllFieldAccess } from "@/hooks/useFieldAccess";
 
@@ -23,6 +26,7 @@ const COLOR_PRESETS = [
 
 const ROLES = [
   { key: "super_admin", label: "Super Admin" },
+  { key: "owner", label: "Owner" },
   { key: "admin", label: "Admin" },
   { key: "admin_input", label: "Admin Input" },
   { key: "lapangan", label: "Lapangan" },
@@ -57,11 +61,23 @@ export default function AppSettings() {
   // Commission rates
   const [rates, setRates] = useState<Record<string, number>>({
     super_admin: 0,
+    owner: 0,
     admin: 5000,
     admin_input: 0,
     lapangan: 10000,
     nib: 5000,
   });
+
+  // Platform billing state (super_admin only)
+  const [billingRecords, setBillingRecords] = useState<any[]>([]);
+  const [ownerUsers, setOwnerUsers] = useState<{ id: string; full_name: string | null; email: string | null }[]>([]);
+  const [newBillingOwner, setNewBillingOwner] = useState("");
+  const [newBillingType, setNewBillingType] = useState("per_sertifikat");
+  const [newBillingAmount, setNewBillingAmount] = useState(0);
+  const [savingBilling, setSavingBilling] = useState(false);
+
+  const isSuperAdmin = role === "super_admin";
+  const isOwner = role === "owner";
 
   const { allAccess, loading: accessLoading, refetch: refetchAccess } = useAllFieldAccess();
 
@@ -110,6 +126,24 @@ export default function AppSettings() {
     };
     loadRates();
   }, []);
+
+  // Fetch platform billing (super_admin only)
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    const fetchBilling = async () => {
+      const { data } = await supabase.from("platform_billing" as any).select("*").order("created_at", { ascending: false });
+      setBillingRecords(data ?? []);
+    };
+    const fetchOwners = async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "owner" as any);
+      if (!roles?.length) { setOwnerUsers([]); return; }
+      const ids = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
+      setOwnerUsers(profiles ?? []);
+    };
+    fetchBilling();
+    fetchOwners();
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     document.documentElement.style.setProperty("--primary", primaryColor);
@@ -207,20 +241,46 @@ export default function AppSettings() {
     toast({ title: "Tarif komisi berhasil disimpan" });
   };
 
-  if (role !== "super_admin") {
+  if (!isSuperAdmin && !isOwner) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-muted-foreground">Hanya Super Admin yang bisa mengakses halaman ini.</p>
+        <p className="text-muted-foreground">Anda tidak memiliki akses ke halaman ini.</p>
       </div>
     );
   }
+
+  const handleSaveBilling = async () => {
+    if (!newBillingOwner) return;
+    setSavingBilling(true);
+    const { error } = await supabase.from("platform_billing" as any).insert({
+      owner_user_id: newBillingOwner,
+      billing_type: newBillingType,
+      amount: newBillingAmount,
+    } as any);
+    setSavingBilling(false);
+    if (error) {
+      toast({ title: "Gagal menyimpan billing", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Billing berhasil ditambahkan" });
+      setNewBillingOwner("");
+      setNewBillingAmount(0);
+      // Refresh
+      const { data } = await supabase.from("platform_billing" as any).select("*").order("created_at", { ascending: false });
+      setBillingRecords(data ?? []);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-2xl font-bold">Pengaturan</h1>
 
-      <Tabs defaultValue="tampilan">
+      <Tabs defaultValue={isSuperAdmin ? "billing" : "tampilan"}>
         <TabsList className="w-full flex-wrap">
+          {isSuperAdmin && (
+            <TabsTrigger value="billing" className="flex-1 gap-2">
+              <CreditCard className="h-4 w-4" /> Billing Platform
+            </TabsTrigger>
+          )}
           <TabsTrigger value="tampilan" className="flex-1 gap-2">
             <Palette className="h-4 w-4" /> Tampilan
           </TabsTrigger>
@@ -474,6 +534,96 @@ export default function AppSettings() {
             Simpan Tarif Komisi
           </Button>
         </TabsContent>
+
+        {/* Platform Billing Tab - Super Admin only */}
+        {isSuperAdmin && (
+          <TabsContent value="billing" className="space-y-6 mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CreditCard className="h-5 w-5" /> Kelola Billing Owner
+                </CardTitle>
+                <CardDescription>
+                  Atur jenis pembayaran dan tarif untuk setiap Owner
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-4 items-end">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Owner</Label>
+                    <Select value={newBillingOwner} onValueChange={setNewBillingOwner}>
+                      <SelectTrigger><SelectValue placeholder="Pilih owner..." /></SelectTrigger>
+                      <SelectContent>
+                        {ownerUsers.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.full_name || u.email || u.id.slice(0, 8)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Jenis Billing</Label>
+                    <Select value={newBillingType} onValueChange={setNewBillingType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="per_sertifikat">Per Sertifikat</SelectItem>
+                        <SelectItem value="per_bulan">Per Bulan</SelectItem>
+                        <SelectItem value="per_group">Per Group</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tarif (Rp)</Label>
+                    <Input
+                      type="number"
+                      value={newBillingAmount}
+                      onChange={(e) => setNewBillingAmount(parseInt(e.target.value) || 0)}
+                      min={0}
+                      step={1000}
+                      className="font-mono"
+                    />
+                  </div>
+                  <Button onClick={handleSaveBilling} disabled={savingBilling || !newBillingOwner}>
+                    {savingBilling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+                    Tambah
+                  </Button>
+                </div>
+
+                {billingRecords.length > 0 && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Owner</TableHead>
+                        <TableHead>Jenis</TableHead>
+                        <TableHead>Tarif</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Tanggal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {billingRecords.map((b: any) => {
+                        const ownerProfile = ownerUsers.find((u) => u.id === b.owner_user_id);
+                        return (
+                          <TableRow key={b.id}>
+                            <TableCell className="font-medium">{ownerProfile?.full_name || ownerProfile?.email || b.owner_user_id.slice(0, 8)}</TableCell>
+                            <TableCell>{b.billing_type?.replace("_", " ")}</TableCell>
+                            <TableCell className="font-mono">Rp {b.amount?.toLocaleString("id-ID")}</TableCell>
+                            <TableCell>
+                              <Badge variant={b.status === "active" ? "default" : "secondary"}>{b.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("id-ID")}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+                {billingRecords.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">Belum ada data billing</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

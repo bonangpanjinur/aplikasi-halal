@@ -87,11 +87,12 @@ export default function GroupDetail() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
 
-  const canDownload = role === "super_admin" || role === "admin" || role === "admin_input";
+  const canDownload = role === "super_admin" || role === "owner" || role === "admin" || role === "admin_input";
 
   // Role-based allowed status changes
   const ROLE_ALLOWED_STATUSES: Record<string, string[]> = {
     super_admin: Object.keys(STATUS_CONFIG),
+    owner: Object.keys(STATUS_CONFIG),
     admin: Object.keys(STATUS_CONFIG),
     lapangan: [],
     nib: ["ktp_terdaftar_nib"],
@@ -117,7 +118,7 @@ export default function GroupDetail() {
   const fetchEntries = async () => {
     if (!groupId) return;
     let query = supabase.from("data_entries").select("*").eq("group_id", groupId).order("created_at", { ascending: false });
-    if (role !== "super_admin" && user) query = query.eq("created_by", user.id);
+    if (role !== "super_admin" && role !== "owner" && user) query = query.eq("created_by", user.id);
     const { data } = await query;
     setEntries(data ?? []);
     // Fetch photo counts
@@ -234,7 +235,7 @@ export default function GroupDetail() {
     fetchGroup();
     fetchEntries();
     fetchMembers();
-    if (role === "super_admin" || role === "admin") {
+    if (role === "super_admin" || role === "owner" || role === "admin") {
       fetchAuditLogs();
     }
   }, [groupId, role]);
@@ -414,13 +415,13 @@ export default function GroupDetail() {
           if (payload.eventType === "INSERT") {
             const newEntry = payload.new as DataEntry;
             // Non-super_admin only sees own entries
-            if (role !== "super_admin" && user && (newEntry as any).created_by !== user.id) return;
+            if (role !== "super_admin" && role !== "owner" && user && (newEntry as any).created_by !== user.id) return;
             setEntries((prev) => [newEntry, ...prev]);
             toast({ title: "Data baru masuk", description: newEntry.nama || "Entri baru ditambahkan" });
           } else if (payload.eventType === "UPDATE") {
             const updated = payload.new as DataEntry;
             // Non-super_admin only updates own entries
-            if (role !== "super_admin" && user && (updated as any).created_by !== user.id) return;
+            if (role !== "super_admin" && role !== "owner" && user && (updated as any).created_by !== user.id) return;
             setEntries((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
             const oldStatus = (payload.old as any)?.status;
             if (oldStatus && oldStatus !== updated.status) {
@@ -431,7 +432,7 @@ export default function GroupDetail() {
             }
           } else if (payload.eventType === "DELETE") {
             const deleted = payload.old as DataEntry;
-            if (role !== "super_admin" && user && (deleted as any).created_by !== user.id) return;
+            if (role !== "super_admin" && role !== "owner" && user && (deleted as any).created_by !== user.id) return;
             setEntries((prev) => prev.filter((e) => e.id !== deleted.id));
           }
         }
@@ -450,10 +451,10 @@ export default function GroupDetail() {
       <Tabs defaultValue="entries">
         <TabsList>
           <TabsTrigger value="entries" className="gap-2"><FileText className="h-4 w-4" /> Data Entri</TabsTrigger>
-          {(role === "super_admin" || role === "admin") && (
+          {(role === "super_admin" || role === "owner" || role === "admin") && (
             <TabsTrigger value="members" className="gap-2"><Users className="h-4 w-4" /> Anggota</TabsTrigger>
           )}
-          {(role === "super_admin" || role === "admin") && (
+          {(role === "super_admin" || role === "owner" || role === "admin") && (
             <TabsTrigger value="audit" className="gap-2" onClick={fetchAuditLogs}>
               <History className="h-4 w-4" /> Audit Log
             </TabsTrigger>
@@ -672,7 +673,7 @@ export default function GroupDetail() {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
-                                {(role === "super_admin" || role === "admin") && (
+                                {(role === "super_admin" || role === "owner" || role === "admin") && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -730,9 +731,9 @@ export default function GroupDetail() {
           )}
         </TabsContent>
 
-        {(role === "super_admin" || role === "admin") && (
+        {(role === "super_admin" || role === "owner" || role === "admin") && (
           <TabsContent value="members" className="mt-4">
-            {role === "super_admin" && (
+            {(role === "super_admin" || role === "owner") && (
               <div className="mb-4">
                 <Dialog open={addMemberOpen} onOpenChange={(o) => { setAddMemberOpen(o); if (o) fetchAvailableUsers(); }}>
                   <DialogTrigger asChild>
@@ -767,7 +768,7 @@ export default function GroupDetail() {
                       <TableHead>Nama</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
-                      {role === "super_admin" && <TableHead className="w-16"></TableHead>}
+                      {(role === "super_admin" || role === "owner") && <TableHead className="w-16"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -778,7 +779,7 @@ export default function GroupDetail() {
                         <TableCell>
                           <Badge variant="outline">{m.role?.replace("_", " ") ?? "-"}</Badge>
                         </TableCell>
-                        {role === "super_admin" && (
+                        {(role === "super_admin" || role === "owner") && (
                           <TableCell>
                             <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(m.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />

@@ -39,11 +39,25 @@ serve(async (req) => {
       .eq("user_id", callerId)
       .single();
 
-    if (callerRole?.role !== "super_admin") {
+    const callerRoleValue = callerRole?.role;
+
+    if (callerRoleValue !== "super_admin" && callerRoleValue !== "owner") {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
     }
 
     const { user_id } = await req.json();
+
+    // Owner cannot delete super_admin or owner
+    if (callerRoleValue === "owner") {
+      const { data: targetRole } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user_id)
+        .single();
+      if (targetRole?.role === "super_admin" || targetRole?.role === "owner") {
+        return new Response(JSON.stringify({ error: "Owner tidak bisa menghapus super_admin atau owner" }), { status: 403, headers: corsHeaders });
+      }
+    }
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id);
     if (error) {

@@ -34,6 +34,7 @@ function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allow
     if (allowedRoles && !allowedRoles.includes("umkm")) return <Navigate to="/umkm" replace />;
     return <AppLayout>{children}</AppLayout>;
   }
+  if (role === "owner" && allowedRoles && !allowedRoles.includes("owner")) return <Navigate to="/dashboard" replace />;
   if (allowedRoles && role && !allowedRoles.includes(role)) return <Navigate to="/dashboard" replace />;
 
   return <AppLayout>{children}</AppLayout>;
@@ -60,13 +61,13 @@ const AppRoutes = () => (
     <Route path="/statistik" element={<PublicStats />} />
     <Route path="/" element={<Navigate to="/dashboard" replace />} />
     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-    <Route path="/users" element={<ProtectedRoute allowedRoles={["super_admin"]}><UsersManagement /></ProtectedRoute>} />
+    <Route path="/users" element={<ProtectedRoute allowedRoles={["super_admin", "owner"]}><UsersManagement /></ProtectedRoute>} />
     <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
     <Route path="/groups/:id" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
     <Route path="/share" element={<ProtectedRoute><ShareLinks /></ProtectedRoute>} />
     <Route path="/komisi" element={<ProtectedRoute><Komisi /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-    <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin"]}><AppSettings /></ProtectedRoute>} />
+    <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin", "owner"]}><AppSettings /></ProtectedRoute>} />
     <Route path="/umkm" element={<ProtectedRoute allowedRoles={["umkm"]}><UmkmDashboard /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
