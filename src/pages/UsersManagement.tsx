@@ -152,6 +152,7 @@ export default function UsersManagement() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Buat User Baru</DialogTitle>
+              <DialogDescription>Isi data untuk membuat akun user baru.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
