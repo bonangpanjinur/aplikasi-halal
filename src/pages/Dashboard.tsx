@@ -129,9 +129,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const isSuperAdmin = role === "super_admin";
+      const isFullAccess = role === "super_admin" || role === "owner";
       let entriesQuery = supabase.from("data_entries").select("id", { count: "exact", head: true });
-      if (!isSuperAdmin && user) entriesQuery = entriesQuery.eq("created_by", user.id);
+      if (!isFullAccess && user) entriesQuery = entriesQuery.eq("created_by", user.id);
 
       const [groupsRes, entriesRes] = await Promise.all([
         supabase.from("groups").select("id", { count: "exact", head: true }),
