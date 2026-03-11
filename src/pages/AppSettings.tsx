@@ -124,6 +124,24 @@ export default function AppSettings() {
     loadRates();
   }, []);
 
+  // Fetch platform billing (super_admin only)
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    const fetchBilling = async () => {
+      const { data } = await supabase.from("platform_billing" as any).select("*").order("created_at", { ascending: false });
+      setBillingRecords(data ?? []);
+    };
+    const fetchOwners = async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "owner" as any);
+      if (!roles?.length) { setOwnerUsers([]); return; }
+      const ids = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
+      setOwnerUsers(profiles ?? []);
+    };
+    fetchBilling();
+    fetchOwners();
+  }, [isSuperAdmin]);
+
   useEffect(() => {
     document.documentElement.style.setProperty("--primary", primaryColor);
     return () => { document.documentElement.style.removeProperty("--primary"); };
