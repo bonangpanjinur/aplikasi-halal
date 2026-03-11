@@ -75,7 +75,7 @@ export default function AppSettings() {
   const [newBillingType, setNewBillingType] = useState("per_sertifikat");
   const [newBillingAmount, setNewBillingAmount] = useState(0);
   const [savingBilling, setSavingBilling] = useState(false);
-
+  const [newTrialDays, setNewTrialDays] = useState(7);
   const isSuperAdmin = role === "super_admin";
   const isOwner = role === "owner";
 
