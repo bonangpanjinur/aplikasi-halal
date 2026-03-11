@@ -733,7 +733,7 @@ export default function GroupDetail() {
 
         {(role === "super_admin" || role === "owner" || role === "admin") && (
           <TabsContent value="members" className="mt-4">
-            {role === "super_admin" && (
+            {(role === "super_admin" || role === "owner") && (
               <div className="mb-4">
                 <Dialog open={addMemberOpen} onOpenChange={(o) => { setAddMemberOpen(o); if (o) fetchAvailableUsers(); }}>
                   <DialogTrigger asChild>
