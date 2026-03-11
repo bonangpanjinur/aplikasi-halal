@@ -80,7 +80,7 @@ export default function TrackingPage() {
       .from("tracking_view" as any)
       .select("*")
       .eq("tracking_code", code)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       setTracking(null);

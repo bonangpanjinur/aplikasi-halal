@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award, AlertTriangle, Link2 } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import PhotoGallery from "@/components/PhotoGallery";
+import { useFieldAccess } from "@/hooks/useFieldAccess";
 import type { Tables, Enums } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
@@ -57,6 +58,7 @@ interface MemberWithProfile {
 export default function GroupDetail() {
   const { id: groupId } = useParams<{ id: string }>();
   const { role, user } = useAuth();
+  const { canView } = useFieldAccess();
   const [group, setGroup] = useState<Tables<"groups"> | null>(null);
   const [entries, setEntries] = useState<DataEntry[]>([]);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
@@ -350,20 +352,28 @@ export default function GroupDetail() {
     }
 
     const statusLabel = (s: string) => STATUS_CONFIG[s]?.label || s;
-    const headers = ["Nama", "Status", "Alamat", "Nomor HP", "Email", "Kata Sandi", "KTP", "NIB", "Foto Produk", "Foto Verifikasi", "Tanggal Dibuat"];
-    const rows = dataToExport.map((e) => [
-      e.nama || "",
-      statusLabel(e.status),
-      e.alamat || "",
-      e.nomor_hp || "",
-      (e as any).email || "",
-      (e as any).kata_sandi || "",
-      e.ktp_url || "",
-      e.nib_url || "",
-      e.foto_produk_url || "",
-      e.foto_verifikasi_url || "",
-      new Date(e.created_at).toLocaleDateString("id-ID"),
-    ]);
+    const headers = ["Nama", "Status", "Alamat", "Nomor HP"];
+    if (canView("email")) headers.push("Email");
+    if (canView("kata_sandi")) headers.push("Kata Sandi");
+    headers.push("KTP", "NIB", "Foto Produk", "Foto Verifikasi", "Tanggal Dibuat");
+    const rows = dataToExport.map((e) => {
+      const row = [
+        e.nama || "",
+        statusLabel(e.status),
+        e.alamat || "",
+        e.nomor_hp || "",
+      ];
+      if (canView("email")) row.push((e as any).email || "");
+      if (canView("kata_sandi")) row.push((e as any).kata_sandi || "");
+      row.push(
+        e.ktp_url || "",
+        e.nib_url || "",
+        e.foto_produk_url || "",
+        e.foto_verifikasi_url || "",
+        new Date(e.created_at).toLocaleDateString("id-ID"),
+      );
+      return row;
+    });
 
     const escapeCsv = (val: string) => {
       if (val.includes(",") || val.includes('"') || val.includes("\n")) {
@@ -585,8 +595,8 @@ export default function GroupDetail() {
                           <TableHead>Status</TableHead>
                           <TableHead>Alamat</TableHead>
                           <TableHead>No HP</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Kata Sandi</TableHead>
+                          {canView("email") && <TableHead>Email</TableHead>}
+                          {canView("kata_sandi") && <TableHead>Kata Sandi</TableHead>}
                           <TableHead>KTP</TableHead>
                           <TableHead>NIB</TableHead>
                           <TableHead>Sertifikat</TableHead>
@@ -647,8 +657,8 @@ export default function GroupDetail() {
                             </TableCell>
                             <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{e.alamat || "-"}</TableCell>
                             <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
-                            <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email || "-"}</TableCell>
-                            <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).kata_sandi || "-"}</TableCell>
+                            {canView("email") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email || "-"}</TableCell>}
+                            {canView("kata_sandi") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).kata_sandi || "-"}</TableCell>}
                             <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{e.nib_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{(e as any).sertifikat_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>

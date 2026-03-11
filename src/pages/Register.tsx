@@ -32,7 +32,7 @@ export default function Register() {
         .from("profiles")
         .select("id") as any)
         .eq("referral_code", referralCode.trim().toUpperCase())
-        .single();
+        .maybeSingle();
       if (!refProfile) {
         toast({ title: "Kode referral tidak valid", variant: "destructive" });
         setLoading(false);

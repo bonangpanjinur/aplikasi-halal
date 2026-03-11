@@ -1,66 +1,112 @@
 
 
-## Analisis Bug dan Rencana Perbaikan
+## Analisis Lengkap: Bug, Perbaikan UX, dan Kebutuhan Fitur
 
-Setelah memeriksa seluruh codebase, berikut bug yang ditemukan dan rencana perbaikannya:
+### A. Bug dan Masalah yang Ditemukan
 
-### Bug yang Ditemukan
+#### 1. DataEntryForm - `useState` digunakan salah untuk side-effect (line 115-127)
+`useState(() => { ... })` digunakan untuk fetch data existing photos. Ini harusnya `useEffect`. Ini bisa menyebabkan foto tidak dimuat ulang saat entry berubah.
 
-**1. Console Error: Select ref warning di UsersManagement**
-- Dialog "Ubah User" menggunakan `<Select>` tanpa `DialogDescription`, menyebabkan warning `Missing Description or aria-describedby`. Juga ada warning ref pada Select component.
-- **Fix**: Tambahkan `DialogDescription` di kedua Dialog.
+#### 2. GroupDetail - Realtime UPDATE tidak difilter per user
+Pada realtime subscription, event UPDATE dan DELETE tidak difilter berdasarkan `created_by` untuk non-super_admin. Jika user lain mengupdate entry di group yang sama, entry tersebut bisa muncul tiba-tiba di state user lain.
 
-**2. Register.tsx: `.single()` pada referral code lookup bisa error**
-- Jika referral code tidak ditemukan, `.single()` throw error alih-alih return null.
-- **Fix**: Ganti `.single()` dengan `.maybeSingle()`.
+#### 3. Dashboard - Chart hanya ditampilkan untuk super_admin/admin
+Line 296: `(role === "super_admin" || role === "admin")` menyembunyikan chart untuk role `lapangan`, `nib`, `admin_input`. Padahal mereka bisa melihat ringkasan data mereka sendiri dalam bentuk chart.
 
-**3. Data sensitif `kata_sandi` terekspos di public RLS policy**
-- Tabel `data_entries` punya policy "Public can view entries by tracking code" yang memperbolehkan siapa saja melihat SEMUA kolom termasuk `kata_sandi` selama `tracking_code IS NOT NULL`. Ini sangat berbahaya.
-- **Fix**: Kolom `kata_sandi` seharusnya tidak terlihat di halaman tracking publik. Tracking view (`tracking_view`) sudah membatasi kolom, tapi policy pada `data_entries` langsung masih terlalu permisif. Perlu audit apakah tracking page mengakses `data_entries` langsung atau via view.
+#### 4. AppLayout - Sidebar menampilkan "HalalTrack" hardcoded
+Meskipun ada setting `app_name` di AppSettings, sidebar masih menampilkan "HalalTrack" hardcoded (line 103, 164). Seharusnya fetch dari `app_settings`.
 
-**4. GroupDetail.tsx: Tabel menampilkan kata_sandi tanpa field access check**
-- Kolom email dan kata_sandi ditampilkan hardcoded tanpa mengecek `canView` dari field access.
-- **Fix**: Perlu filter kolom berdasarkan field access permission.
+#### 5. AppSettings - Simpan commission_rates menggunakan UPDATE tanpa INSERT
+Jika role belum ada di tabel `commission_rates`, UPDATE tidak akan melakukan apa-apa. Seharusnya gunakan UPSERT.
 
-**5. DataEntryForm: `(entry as any)?.email` dan `(entry as any)?.kata_sandi` - type casting**
-- Fields email dan kata_sandi di-cast sebagai `any` karena types belum terupdate. Ini bukan bug kritis tapi bisa menyebabkan silent failures.
-- **Fix**: Kolom sudah ada di database. Types file auto-generated, jadi ini akan terselesaikan saat types direfresh. Sementara cast `as any` acceptable.
+#### 6. AppSettings - Simpan field_access juga hanya UPDATE
+Sama seperti commission_rates, jika row belum ada di `field_access`, UPDATE tidak menyimpan perubahan baru.
 
-**6. AppSettings: RLS policy `field_access` - super_admin missing WITH CHECK**
-- Policy "Super admin can manage field access" menggunakan `ALL` tapi tidak memiliki `WITH CHECK` expression, sehingga insert/update bisa silently fail.
-- **Fix**: Tambahkan WITH CHECK expression.
+#### 7. Komisi - Admin bisa "Cairkan" tapi tidak ada konfirmasi
+Tombol "Cairkan Semua Pending" langsung mengeksekusi tanpa dialog konfirmasi. Ini berbahaya karena bisa mengubah banyak data sekaligus.
 
-**7. Dashboard: `platform_billing` query menggunakan `as any` cast**
-- `supabase.from("platform_billing" as any)` menandakan tabel ini belum ada di types. Query bisa gagal silently.
-- Ini karena types belum di-sync. Bukan bug kritis.
+#### 8. UsersManagement - Hapus user tanpa konfirmasi
+Tombol delete langsung memanggil `handleDelete` tanpa dialog konfirmasi.
 
-**8. Register: Auto-confirm mungkin tidak aktif**
-- User register UMKM langsung navigate ke `/umkm` tanpa verifikasi email. Jika auto-confirm tidak aktif, user tidak bisa login.
-- Perlu cek: apakah ini by design atau bug.
+---
 
-### Rencana Implementasi
+### B. Perbaikan UX yang Dibutuhkan
 
-#### Task 1: Fix UsersManagement Dialog warnings
-- Tambahkan `DialogDescription` ke kedua Dialog (create & edit user)
+#### 1. Dashboard per Role lebih informatif
+- **Lapangan**: Tampilkan jumlah data yang di-input hari ini, minggu ini, bulan ini. Tampilkan progress bar target (jika ada).
+- **NIB**: Tampilkan antrian data yang perlu di-proses NIB-nya (status `siap_input`).
+- **Admin Input**: Tampilkan data yang perlu di-input (status `siap_input`).
+- Semua role: Tampilkan chart status masing-masing, bukan hanya super_admin/admin.
 
-#### Task 2: Fix Register referral code lookup
-- Ganti `.single()` dengan `.maybeSingle()` pada query referral code
+#### 2. GroupDetail - Tampilan tabel tidak responsive
+Tabel entri bisa sangat lebar di mobile. Perlu scroll horizontal yang lebih jelas atau card view untuk mobile.
 
-#### Task 3: Fix GroupDetail - field access check untuk kolom email/kata_sandi
-- Wrap kolom email dan kata_sandi dengan `canView()` check di tabel dan CSV export
+#### 3. ShareLinks - Tidak ada statistik per link
+Admin/lapangan tidak tahu berapa banyak data yang masuk dari setiap share link. Perlu counter "X data masuk via link ini".
 
-#### Task 4: Perkuat keamanan tracking - batasi kolom yang bisa diakses publik
-- Pastikan halaman tracking menggunakan `tracking_view` (yang sudah membatasi kolom), bukan query langsung ke `data_entries`
+#### 4. Profile - Tidak menampilkan role user
+Halaman profile tidak menunjukkan role user saat ini.
 
-#### Task 5: Fix super_admin field_access RLS policy
-- Tambahkan WITH CHECK expression pada policy "Super admin can manage field access"
+#### 5. Public Form - Tidak ada loading state saat submit
+Form publik tidak menampilkan loading indicator saat data sedang dikirim.
 
-### Detail Teknis
+---
 
-**Files yang akan diubah:**
-- `src/pages/UsersManagement.tsx` - Tambah DialogDescription
-- `src/pages/Register.tsx` - `.single()` → `.maybeSingle()`
-- `src/pages/GroupDetail.tsx` - Field access check untuk email/kata_sandi
-- `src/pages/Dashboard.tsx` - Field access check untuk kata_sandi di recent entries
-- Database migration - Fix RLS policy super_admin field_access WITH CHECK
+### C. Fitur yang Dibutuhkan
+
+#### Untuk Admin (super_admin/admin)
+
+1. **Dashboard ringkasan kinerja per admin**
+   - Super admin bisa melihat berapa banyak data yang diinput oleh masing-masing admin lapangan dalam periode tertentu.
+   - Ranking/leaderboard admin berdasarkan jumlah input.
+
+2. **Notifikasi untuk admin**
+   - Saat data baru masuk via share link, admin yang membuat link mendapat notifikasi.
+   - Saat status berubah, admin terkait mendapat notifikasi.
+
+3. **Bulk edit/delete entries**
+   - Bulk delete sudah bisa di-support tapi belum ada tombolnya.
+   - Bulk assign PIC ke entry tertentu.
+
+4. **Export data lebih lengkap**
+   - Export dengan foto (ZIP) sudah ada, tapi export CSV belum menyertakan tracking code dan nama PIC.
+
+5. **Statistik share link**
+   - Jumlah klik dan data yang masuk per share link.
+
+6. **Log aktivitas global**
+   - Super admin bisa melihat semua audit log lintas group, bukan hanya per group.
+
+#### Untuk UMKM
+
+1. **Progress timeline/tracker visual**
+   - Tampilkan timeline visual dari proses sertifikasi (belum lengkap → siap input → ... → sertifikat selesai), bukan hanya badge status.
+
+2. **Download dokumen sendiri**
+   - UMKM bisa download NIB dan sertifikat halal mereka langsung dari dashboard.
+
+3. **Hubungi petugas**
+   - Tombol WhatsApp/kontak langsung ke petugas lapangan yang menangani data mereka.
+
+4. **Riwayat perubahan status**
+   - UMKM bisa melihat kapan status mereka berubah dan oleh siapa.
+
+---
+
+### D. Prioritas Implementasi yang Disarankan
+
+| Prioritas | Item | Kategori |
+|-----------|------|----------|
+| Tinggi | Fix useState → useEffect di DataEntryForm | Bug |
+| Tinggi | Fix realtime filter di GroupDetail | Bug |
+| Tinggi | Konfirmasi sebelum cairkan komisi & hapus user | UX |
+| Tinggi | Fetch app_name & logo di sidebar | Bug |
+| Sedang | Chart untuk semua role di Dashboard | UX |
+| Sedang | Upsert untuk commission_rates & field_access | Bug |
+| Sedang | Progress timeline untuk UMKM | Fitur |
+| Sedang | Statistik per share link | Fitur |
+| Sedang | Dashboard kinerja admin untuk super_admin | Fitur |
+| Rendah | Notifikasi admin | Fitur |
+| Rendah | Export CSV lebih lengkap | Fitur |
+| Rendah | Kontak petugas untuk UMKM | Fitur |
 
