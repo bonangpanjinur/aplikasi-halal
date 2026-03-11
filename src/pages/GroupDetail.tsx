@@ -89,7 +89,7 @@ export default function GroupDetail() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
 
-  const canDownload = role === "super_admin" || role === "owner" || role === "admin" || role === "admin_input";
+  const canDownload = ["super_admin", "admin", "owner", "admin_input"].includes(role || "");
 
   // Role-based allowed status changes
   const ROLE_ALLOWED_STATUSES: Record<string, string[]> = {

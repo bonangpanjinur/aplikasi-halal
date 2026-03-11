@@ -42,8 +42,11 @@ serve(async (req) => {
       .eq("user_id", callerId)
       .single();
 
-    if (!callerRole || !["super_admin", "admin", "admin_input"].includes(callerRole.role)) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
+    // Buat daftar role yang diizinkan untuk mendownload data
+    const allowedRoles = ["super_admin", "admin", "owner", "admin_input"];
+
+    if (!callerRole || !allowedRoles.includes(callerRole.role)) {
+      return new Response(JSON.stringify({ error: "Forbidden: Insufficient access to download data" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
