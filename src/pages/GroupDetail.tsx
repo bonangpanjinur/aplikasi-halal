@@ -352,19 +352,28 @@ export default function GroupDetail() {
     }
 
     const statusLabel = (s: string) => STATUS_CONFIG[s]?.label || s;
-    const headers = ["Nama", "Status", "Alamat", "Nomor HP", "Email", "Kata Sandi", "KTP", "NIB", "Foto Produk", "Foto Verifikasi", "Tanggal Dibuat"];
-    const rows = dataToExport.map((e) => [
-      e.nama || "",
-      statusLabel(e.status),
-      e.alamat || "",
-      e.nomor_hp || "",
-      (e as any).email || "",
-      (e as any).kata_sandi || "",
-      e.ktp_url || "",
-      e.nib_url || "",
-      e.foto_produk_url || "",
-      e.foto_verifikasi_url || "",
-      new Date(e.created_at).toLocaleDateString("id-ID"),
+    const headers = ["Nama", "Status", "Alamat", "Nomor HP"];
+    if (canView("email")) headers.push("Email");
+    if (canView("kata_sandi")) headers.push("Kata Sandi");
+    headers.push("KTP", "NIB", "Foto Produk", "Foto Verifikasi", "Tanggal Dibuat");
+    const rows = dataToExport.map((e) => {
+      const row = [
+        e.nama || "",
+        statusLabel(e.status),
+        e.alamat || "",
+        e.nomor_hp || "",
+      ];
+      if (canView("email")) row.push((e as any).email || "");
+      if (canView("kata_sandi")) row.push((e as any).kata_sandi || "");
+      row.push(
+        e.ktp_url || "",
+        e.nib_url || "",
+        e.foto_produk_url || "",
+        e.foto_verifikasi_url || "",
+        new Date(e.created_at).toLocaleDateString("id-ID"),
+      );
+      return row;
+    });
     ]);
 
     const escapeCsv = (val: string) => {
