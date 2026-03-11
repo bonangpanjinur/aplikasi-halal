@@ -614,12 +614,15 @@ export default function AppSettings() {
                         <TableHead>Jenis</TableHead>
                         <TableHead>Tarif</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Trial</TableHead>
                         <TableHead>Tanggal</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {billingRecords.map((b: any) => {
                         const ownerProfile = ownerUsers.find((u) => u.id === b.owner_user_id);
+                        const trialEnd = b.trial_start ? new Date(new Date(b.trial_start).getTime() + (b.trial_days ?? 7) * 86400000) : null;
+                        const trialRemaining = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null;
                         return (
                           <TableRow key={b.id}>
                             <TableCell className="font-medium">{ownerProfile?.full_name || ownerProfile?.email || b.owner_user_id.slice(0, 8)}</TableCell>
@@ -627,6 +630,15 @@ export default function AppSettings() {
                             <TableCell className="font-mono">Rp {b.amount?.toLocaleString("id-ID")}</TableCell>
                             <TableCell>
                               <Badge variant={b.status === "active" ? "default" : "secondary"}>{b.status}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {trialRemaining !== null ? (
+                                <Badge variant={trialRemaining > 0 ? "outline" : "destructive"}>
+                                  {trialRemaining > 0 ? `${trialRemaining} hari tersisa` : "Expired"}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("id-ID")}</TableCell>
                           </TableRow>
