@@ -347,6 +347,140 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Financial Dashboard - Super Admin Only */}
+      {role === "super_admin" && (
+        <>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <DollarSign className="h-5 w-5" /> Laporan Keuangan & Pendapatan
+          </h2>
+
+          {/* Finance Summary Cards */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+            <Card className="border-l-4 border-l-emerald-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Billing</CardTitle>
+                <Wallet className="h-4 w-4 text-emerald-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatRupiah(financeStats.totalBilling)}</p>
+                <p className="text-xs text-muted-foreground mt-1">{financeStats.activeBilling} owner aktif</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Komisi</CardTitle>
+                <Receipt className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatRupiah(financeStats.totalCommissions)}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Pending: {formatRupiah(financeStats.pendingCommissions)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Komisi Dibayar</CardTitle>
+                <ArrowUpRight className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatRupiah(financeStats.paidCommissions)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Sudah dibayarkan</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Pencairan</CardTitle>
+                <CreditCard className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatRupiah(financeStats.totalDisbursements)}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Pending: {formatRupiah(financeStats.pendingDisbursements)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Finance Charts Row */}
+          <div className="grid gap-6 lg:grid-cols-2 mb-6">
+            {/* Commission by Role Chart */}
+            {commissionByRole.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Receipt className="h-4 w-4" /> Komisi per Role
+                  </CardTitle>
+                  <CardDescription>Total komisi yang dihasilkan berdasarkan role</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={commissionBarConfig} className="max-h-[260px]">
+                    <BarChart data={commissionByRole} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} className="stroke-muted" />
+                      <XAxis dataKey="role" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                      <ChartTooltip content={<ChartTooltipContent />} formatter={(value) => [formatRupiah(Number(value)), ""]} />
+                      <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]}>
+                        <LabelList dataKey="amount" position="top" style={{ fontSize: 11, fontWeight: 600, fill: "hsl(var(--foreground))" }} formatter={(v: number) => formatRupiah(v)} />
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Billing Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Wallet className="h-4 w-4" /> Billing Owner
+                </CardTitle>
+                <CardDescription>Status billing setiap owner</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {billingData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">Belum ada data billing</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Owner</TableHead>
+                          <TableHead>Tipe</TableHead>
+                          <TableHead>Jumlah</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {billingData.slice(0, 10).map((b, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-sm font-medium">{b.owner}</TableCell>
+                            <TableCell className="text-sm">{BILLING_TYPE_LABELS[b.type] || b.type}</TableCell>
+                            <TableCell className="text-sm">{formatRupiah(b.amount)}</TableCell>
+                            <TableCell>
+                              <Badge variant={b.status === "active" ? "default" : "secondary"}>
+                                {b.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+
       {/* Status Stats Cards */}
       {totalEntries > 0 && (
         <div className="grid gap-4 sm:grid-cols-3 mb-8">
