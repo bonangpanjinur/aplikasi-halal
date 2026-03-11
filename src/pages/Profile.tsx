@@ -108,6 +108,23 @@ export default function Profile() {
               <Badge variant="secondary" className="capitalize">{role.replace("_", " ")}</Badge>
             </div>
           )}
+          {referralCode && (role === "owner" || role === "admin" || role === "super_admin" || role === "lapangan") && (
+            <div className="flex items-center gap-2 rounded-lg border p-3 bg-muted/30">
+              <span className="text-sm text-muted-foreground">Kode Referral:</span>
+              <code className="font-mono font-bold text-primary">{referralCode}</code>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => {
+                  navigator.clipboard.writeText(referralCode);
+                  toast({ title: "Kode referral disalin!" });
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Nama Lengkap</Label>
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nama lengkap" />
