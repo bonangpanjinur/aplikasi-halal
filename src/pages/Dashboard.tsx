@@ -218,9 +218,72 @@ export default function Dashboard() {
       setRecentEntries(data ?? []);
     };
 
+    const fetchFinancials = async () => {
+      if (role !== "super_admin") return;
+
+      // Billing data
+      const { data: billings } = await supabase
+        .from("platform_billing")
+        .select("*, profiles:owner_user_id(full_name, email)")
+        .order("created_at", { ascending: false });
+
+      const bills = billings ?? [];
+      const activeBills = bills.filter((b: any) => b.status === "active");
+      const totalBillingAmount = bills.reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
+
+      setBillingData(bills.map((b: any) => ({
+        owner: b.profiles?.full_name || b.profiles?.email || "Unknown",
+        type: b.billing_type,
+        amount: b.amount,
+        status: b.status,
+        trial_days: b.trial_days,
+        trial_start: b.trial_start,
+      })));
+
+      // Commissions
+      const { data: commissions } = await supabase.from("commissions").select("*");
+      const comms = commissions ?? [];
+      const totalComm = comms.reduce((s: number, c: any) => s + (c.amount || 0), 0);
+      const pendingComm = comms.filter((c: any) => c.status === "pending").reduce((s: number, c: any) => s + (c.amount || 0), 0);
+      const paidComm = comms.filter((c: any) => c.status === "paid").reduce((s: number, c: any) => s + (c.amount || 0), 0);
+
+      // Commission by user role
+      const commUserIds = [...new Set(comms.map((c: any) => c.user_id))];
+      if (commUserIds.length > 0) {
+        const { data: roles } = await supabase.from("user_roles").select("user_id, role").in("user_id", commUserIds);
+        const roleMap: Record<string, string> = {};
+        (roles ?? []).forEach((r: any) => { roleMap[r.user_id] = r.role; });
+        const byRole: Record<string, number> = {};
+        comms.forEach((c: any) => {
+          const r = roleMap[c.user_id] || "unknown";
+          byRole[r] = (byRole[r] || 0) + (c.amount || 0);
+        });
+        setCommissionByRole(Object.entries(byRole).map(([role, amount]) => ({ role, amount })));
+      }
+
+      // Disbursements
+      const { data: disbursements } = await supabase.from("disbursements").select("*");
+      const disb = disbursements ?? [];
+      const totalDisb = disb.reduce((s: number, d: any) => s + (d.amount || 0), 0);
+      const pendingDisb = disb.filter((d: any) => d.status === "pending").reduce((s: number, d: any) => s + (d.amount || 0), 0);
+      const approvedDisb = disb.filter((d: any) => d.status === "approved").reduce((s: number, d: any) => s + (d.amount || 0), 0);
+
+      setFinanceStats({
+        totalBilling: totalBillingAmount,
+        activeBilling: activeBills.length,
+        totalCommissions: totalComm,
+        pendingCommissions: pendingComm,
+        paidCommissions: paidComm,
+        totalDisbursements: totalDisb,
+        pendingDisbursements: pendingDisb,
+        approvedDisbursements: approvedDisb,
+      });
+    };
+
     fetchStats();
     fetchChartData();
     fetchRecentEntries();
+    fetchFinancials();
   }, [role, user]);
 
   const cards = [
