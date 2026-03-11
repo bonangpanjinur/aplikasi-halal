@@ -38,11 +38,21 @@ const FIELDS = [
   { key: "nama", label: "Nama" },
   { key: "alamat", label: "Alamat" },
   { key: "nomor_hp", label: "Nomor HP" },
+  { key: "email", label: "Email" },
+  { key: "kata_sandi", label: "Kata Sandi" },
   { key: "ktp", label: "Foto KTP" },
   { key: "nib", label: "NIB" },
   { key: "foto_produk", label: "Foto Produk" },
   { key: "foto_verifikasi", label: "Foto Verifikasi" },
   { key: "sertifikat", label: "Sertifikat Halal" },
+];
+
+// Roles that receive commission from owner (not owner/super_admin themselves)
+const COMMISSION_ROLES = [
+  { key: "admin", label: "Admin" },
+  { key: "admin_input", label: "Admin Input" },
+  { key: "lapangan", label: "Lapangan" },
+  { key: "nib", label: "NIB" },
 ];
 
 export default function AppSettings() {
@@ -521,11 +531,11 @@ export default function AppSettings() {
                 <Wallet className="h-5 w-5" /> Tarif Komisi per Role
               </CardTitle>
               <CardDescription>
-                Atur jumlah komisi (Rupiah) per data baru yang berhasil diinput oleh masing-masing role
+                Atur jumlah komisi (Rupiah) yang diberikan Owner kepada setiap role per data yang berhasil diproses
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {ALL_ROLES.map((r) => (
+              {COMMISSION_ROLES.map((r) => (
                 <div key={r.key} className="flex items-center justify-between rounded-lg border p-3">
                   <span className="text-sm font-medium">{r.label}</span>
                   <div className="flex items-center gap-2">
