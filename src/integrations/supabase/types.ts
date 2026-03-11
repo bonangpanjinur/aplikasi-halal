@@ -410,6 +410,39 @@ export type Database = {
           },
         ]
       }
+      platform_billing: {
+        Row: {
+          amount: number
+          billing_type: Database["public"]["Enums"]["billing_type"]
+          created_at: string
+          id: string
+          notes: string | null
+          owner_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          billing_type?: Database["public"]["Enums"]["billing_type"]
+          created_at?: string
+          id?: string
+          notes?: string | null
+          owner_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_type?: Database["public"]["Enums"]["billing_type"]
+          created_at?: string
+          id?: string
+          notes?: string | null
+          owner_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -546,6 +579,7 @@ export type Database = {
         | "nib"
         | "admin_input"
         | "umkm"
+      billing_type: "per_sertifikat" | "per_bulan" | "per_group"
       entry_status:
         | "belum_lengkap"
         | "siap_input"
@@ -692,6 +726,7 @@ export const Constants = {
         "admin_input",
         "umkm",
       ],
+      billing_type: ["per_sertifikat", "per_bulan", "per_group"],
       entry_status: [
         "belum_lengkap",
         "siap_input",
