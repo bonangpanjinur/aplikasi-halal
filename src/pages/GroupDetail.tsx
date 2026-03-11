@@ -583,6 +583,8 @@ export default function GroupDetail() {
                           <TableHead>Status</TableHead>
                           <TableHead>Alamat</TableHead>
                           <TableHead>No HP</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Kata Sandi</TableHead>
                           <TableHead>KTP</TableHead>
                           <TableHead>NIB</TableHead>
                           <TableHead>Sertifikat</TableHead>
