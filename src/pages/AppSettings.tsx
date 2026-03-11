@@ -256,6 +256,8 @@ export default function AppSettings() {
       owner_user_id: newBillingOwner,
       billing_type: newBillingType,
       amount: newBillingAmount,
+      trial_days: newTrialDays,
+      trial_start: new Date().toISOString(),
     } as any);
     setSavingBilling(false);
     if (error) {
