@@ -4,8 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check } from "lucide-react";
+import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check, Download, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
@@ -27,6 +28,13 @@ interface UmkmEntry {
   nib_url: string | null;
   sertifikat_url: string | null;
   created_at: string;
+  created_by: string | null;
+}
+
+interface OfficerProfile {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
 }
 
 interface Notification {
@@ -41,6 +49,7 @@ export default function UmkmDashboard() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<UmkmEntry[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [officers, setOfficers] = useState<Record<string, OfficerProfile>>({});
   const [loading, setLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -50,7 +59,7 @@ export default function UmkmDashboard() {
       const [entriesRes, notifRes] = await Promise.all([
         supabase
           .from("data_entries")
-          .select("id, nama, status, tracking_code, nib_url, sertifikat_url, created_at")
+          .select("id, nama, status, tracking_code, nib_url, sertifikat_url, created_at, created_by")
           .eq("umkm_user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase
@@ -60,8 +69,22 @@ export default function UmkmDashboard() {
           .order("created_at", { ascending: false })
           .limit(20),
       ]);
-      setEntries(entriesRes.data ?? []);
+      const entriesData = (entriesRes.data ?? []) as UmkmEntry[];
+      setEntries(entriesData);
       setNotifications((notifRes.data as unknown as Notification[]) ?? []);
+
+      // Fetch officer profiles
+      const officerIds = [...new Set(entriesData.map(e => e.created_by).filter(Boolean))] as string[];
+      if (officerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, phone")
+          .in("id", officerIds);
+        const map: Record<string, OfficerProfile> = {};
+        (profiles ?? []).forEach((p: any) => { map[p.id] = p; });
+        setOfficers(map);
+      }
+
       setLoading(false);
     };
     fetchData();
@@ -208,9 +231,54 @@ export default function UmkmDashboard() {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Terdaftar: {new Date(entry.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-                  </p>
+
+                  {/* Download & Contact buttons */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {entry.nib_url && (
+                      <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                        <a href={entry.nib_url} download target="_blank" rel="noopener noreferrer">
+                          <Download className="h-3.5 w-3.5" />
+                          Download NIB
+                        </a>
+                      </Button>
+                    )}
+                    {entry.sertifikat_url && (
+                      <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                        <a href={entry.sertifikat_url} download target="_blank" rel="noopener noreferrer">
+                          <Download className="h-3.5 w-3.5" />
+                          Download Sertifikat
+                        </a>
+                      </Button>
+                    )}
+                    {entry.created_by && officers[entry.created_by]?.phone && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                        asChild
+                      >
+                        <a
+                          href={`https://wa.me/${officers[entry.created_by].phone!.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Halo, saya ${entry.nama || "UMKM"} ingin menanyakan status data saya (${entry.tracking_code || entry.id.slice(0, 8)}).`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Hubungi Petugas
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Terdaftar: {new Date(entry.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                    </p>
+                    {entry.created_by && officers[entry.created_by] && (
+                      <p className="text-xs text-muted-foreground">
+                        Petugas: {officers[entry.created_by].full_name || "—"}
+                      </p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
