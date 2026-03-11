@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, FolderOpen, FileText, Link2, TrendingUp, Eye } from "lucide-react";
+import { Users, FolderOpen, FileText, Link2, TrendingUp, Eye, DollarSign, Wallet, Receipt, CreditCard, ArrowUpRight, ArrowDownRight, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFieldAccess } from "@/hooks/useFieldAccess";
@@ -125,6 +125,20 @@ export default function Dashboard() {
   const [groupData, setGroupData] = useState<GroupStat[]>([]);
   const [recentEntries, setRecentEntries] = useState<DataEntry[]>([]);
 
+  // Financial state (super_admin)
+  const [financeStats, setFinanceStats] = useState({
+    totalBilling: 0,
+    activeBilling: 0,
+    totalCommissions: 0,
+    pendingCommissions: 0,
+    paidCommissions: 0,
+    totalDisbursements: 0,
+    pendingDisbursements: 0,
+    approvedDisbursements: 0,
+  });
+  const [billingData, setBillingData] = useState<any[]>([]);
+  const [commissionByRole, setCommissionByRole] = useState<{ role: string; amount: number }[]>([]);
+
   const visibleFields = fields.filter((f) => f.can_view);
 
   useEffect(() => {
@@ -204,9 +218,72 @@ export default function Dashboard() {
       setRecentEntries(data ?? []);
     };
 
+    const fetchFinancials = async () => {
+      if (role !== "super_admin") return;
+
+      // Billing data
+      const { data: billings } = await supabase
+        .from("platform_billing")
+        .select("*, profiles:owner_user_id(full_name, email)")
+        .order("created_at", { ascending: false });
+
+      const bills = billings ?? [];
+      const activeBills = bills.filter((b: any) => b.status === "active");
+      const totalBillingAmount = bills.reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
+
+      setBillingData(bills.map((b: any) => ({
+        owner: b.profiles?.full_name || b.profiles?.email || "Unknown",
+        type: b.billing_type,
+        amount: b.amount,
+        status: b.status,
+        trial_days: b.trial_days,
+        trial_start: b.trial_start,
+      })));
+
+      // Commissions
+      const { data: commissions } = await supabase.from("commissions").select("*");
+      const comms = commissions ?? [];
+      const totalComm = comms.reduce((s: number, c: any) => s + (c.amount || 0), 0);
+      const pendingComm = comms.filter((c: any) => c.status === "pending").reduce((s: number, c: any) => s + (c.amount || 0), 0);
+      const paidComm = comms.filter((c: any) => c.status === "paid").reduce((s: number, c: any) => s + (c.amount || 0), 0);
+
+      // Commission by user role
+      const commUserIds = [...new Set(comms.map((c: any) => c.user_id))];
+      if (commUserIds.length > 0) {
+        const { data: roles } = await supabase.from("user_roles").select("user_id, role").in("user_id", commUserIds);
+        const roleMap: Record<string, string> = {};
+        (roles ?? []).forEach((r: any) => { roleMap[r.user_id] = r.role; });
+        const byRole: Record<string, number> = {};
+        comms.forEach((c: any) => {
+          const r = roleMap[c.user_id] || "unknown";
+          byRole[r] = (byRole[r] || 0) + (c.amount || 0);
+        });
+        setCommissionByRole(Object.entries(byRole).map(([role, amount]) => ({ role, amount })));
+      }
+
+      // Disbursements
+      const { data: disbursements } = await supabase.from("disbursements").select("*");
+      const disb = disbursements ?? [];
+      const totalDisb = disb.reduce((s: number, d: any) => s + (d.amount || 0), 0);
+      const pendingDisb = disb.filter((d: any) => d.status === "pending").reduce((s: number, d: any) => s + (d.amount || 0), 0);
+      const approvedDisb = disb.filter((d: any) => d.status === "approved").reduce((s: number, d: any) => s + (d.amount || 0), 0);
+
+      setFinanceStats({
+        totalBilling: totalBillingAmount,
+        activeBilling: activeBills.length,
+        totalCommissions: totalComm,
+        pendingCommissions: pendingComm,
+        paidCommissions: paidComm,
+        totalDisbursements: totalDisb,
+        pendingDisbursements: pendingDisb,
+        approvedDisbursements: approvedDisb,
+      });
+    };
+
     fetchStats();
     fetchChartData();
     fetchRecentEntries();
+    fetchFinancials();
   }, [role, user]);
 
   const cards = [
@@ -215,6 +292,18 @@ export default function Dashboard() {
     { label: "Total User", value: stats.users, icon: Users, show: role === "super_admin" || role === "owner" },
     { label: "Link Aktif", value: stats.links, icon: Link2, show: true },
   ];
+  const formatRupiah = (n: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
+  const BILLING_TYPE_LABELS: Record<string, string> = {
+    per_sertifikat: "Per Sertifikat",
+    per_bulan: "Per Bulan",
+    per_group: "Per Group",
+  };
+
+  const commissionBarConfig: ChartConfig = {
+    amount: { label: "Komisi", color: "hsl(var(--primary))" },
+  };
 
   const totalEntries = statusData.reduce((s, d) => s + d.count, 0);
 
@@ -257,6 +346,140 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Financial Dashboard - Super Admin Only */}
+      {role === "super_admin" && (
+        <>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <DollarSign className="h-5 w-5" /> Laporan Keuangan & Pendapatan
+          </h2>
+
+          {/* Finance Summary Cards */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+            <Card className="border-l-4 border-l-emerald-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Billing</CardTitle>
+                <Wallet className="h-4 w-4 text-emerald-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatRupiah(financeStats.totalBilling)}</p>
+                <p className="text-xs text-muted-foreground mt-1">{financeStats.activeBilling} owner aktif</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Komisi</CardTitle>
+                <Receipt className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatRupiah(financeStats.totalCommissions)}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Pending: {formatRupiah(financeStats.pendingCommissions)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Komisi Dibayar</CardTitle>
+                <ArrowUpRight className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatRupiah(financeStats.paidCommissions)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Sudah dibayarkan</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Pencairan</CardTitle>
+                <CreditCard className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatRupiah(financeStats.totalDisbursements)}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Pending: {formatRupiah(financeStats.pendingDisbursements)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Finance Charts Row */}
+          <div className="grid gap-6 lg:grid-cols-2 mb-6">
+            {/* Commission by Role Chart */}
+            {commissionByRole.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Receipt className="h-4 w-4" /> Komisi per Role
+                  </CardTitle>
+                  <CardDescription>Total komisi yang dihasilkan berdasarkan role</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={commissionBarConfig} className="max-h-[260px]">
+                    <BarChart data={commissionByRole} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} className="stroke-muted" />
+                      <XAxis dataKey="role" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                      <ChartTooltip content={<ChartTooltipContent />} formatter={(value) => [formatRupiah(Number(value)), ""]} />
+                      <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]}>
+                        <LabelList dataKey="amount" position="top" style={{ fontSize: 11, fontWeight: 600, fill: "hsl(var(--foreground))" }} formatter={(v: number) => formatRupiah(v)} />
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Billing Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Wallet className="h-4 w-4" /> Billing Owner
+                </CardTitle>
+                <CardDescription>Status billing setiap owner</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {billingData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">Belum ada data billing</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Owner</TableHead>
+                          <TableHead>Tipe</TableHead>
+                          <TableHead>Jumlah</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {billingData.slice(0, 10).map((b, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-sm font-medium">{b.owner}</TableCell>
+                            <TableCell className="text-sm">{BILLING_TYPE_LABELS[b.type] || b.type}</TableCell>
+                            <TableCell className="text-sm">{formatRupiah(b.amount)}</TableCell>
+                            <TableCell>
+                              <Badge variant={b.status === "active" ? "default" : "secondary"}>
+                                {b.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
 
       {/* Status Stats Cards */}
       {totalEntries > 0 && (
