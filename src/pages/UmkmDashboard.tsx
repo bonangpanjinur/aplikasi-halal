@@ -4,8 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check } from "lucide-react";
+import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check, Download, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
@@ -27,6 +28,13 @@ interface UmkmEntry {
   nib_url: string | null;
   sertifikat_url: string | null;
   created_at: string;
+  created_by: string | null;
+}
+
+interface OfficerProfile {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
 }
 
 interface Notification {
