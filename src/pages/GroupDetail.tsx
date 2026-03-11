@@ -374,7 +374,6 @@ export default function GroupDetail() {
       );
       return row;
     });
-    ]);
 
     const escapeCsv = (val: string) => {
       if (val.includes(",") || val.includes('"') || val.includes("\n")) {
