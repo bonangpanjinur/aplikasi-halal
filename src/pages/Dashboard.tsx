@@ -193,13 +193,13 @@ export default function Dashboard() {
     };
 
     const fetchRecentEntries = async () => {
-      const isSuperAdmin = role === "super_admin";
+      const isFullAccess = role === "super_admin" || role === "owner";
       let recentQuery = supabase
         .from("data_entries")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(10);
-      if (!isSuperAdmin && user) recentQuery = recentQuery.eq("created_by", user.id);
+      if (!isFullAccess && user) recentQuery = recentQuery.eq("created_by", user.id);
       const { data } = await recentQuery;
       setRecentEntries(data ?? []);
     };
