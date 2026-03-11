@@ -1,112 +1,64 @@
 
 
-## Analisis Lengkap: Bug, Perbaikan UX, dan Kebutuhan Fitur
+## Rencana Perbaikan
 
-### A. Bug dan Masalah yang Ditemukan
+Berdasarkan analisis plan.md dan kode saat ini, berikut status terkini dan perbaikan yang masih diperlukan:
 
-#### 1. DataEntryForm - `useState` digunakan salah untuk side-effect (line 115-127)
-`useState(() => { ... })` digunakan untuk fetch data existing photos. Ini harusnya `useEffect`. Ini bisa menyebabkan foto tidak dimuat ulang saat entry berubah.
+### Status Bug dari Plan (Sudah Diperbaiki)
 
-#### 2. GroupDetail - Realtime UPDATE tidak difilter per user
-Pada realtime subscription, event UPDATE dan DELETE tidak difilter berdasarkan `created_by` untuk non-super_admin. Jika user lain mengupdate entry di group yang sama, entry tersebut bisa muncul tiba-tiba di state user lain.
+Item berikut **sudah tidak perlu diperbaiki**:
+- Bug #1: `useState` → `useEffect` di DataEntryForm — sudah `useEffect`
+- Bug #5: commission_rates sudah pakai `upsert`
+- Bug #6: field_access sudah pakai `upsert`
+- Bug #7: Komisi "Cairkan" sudah punya AlertDialog konfirmasi
+- Bug #8: UsersManagement delete sudah punya AlertDialog konfirmasi
+- Bug #4: AppLayout sudah fetch `app_name` dari `app_settings`
 
-#### 3. Dashboard - Chart hanya ditampilkan untuk super_admin/admin
-Line 296: `(role === "super_admin" || role === "admin")` menyembunyikan chart untuk role `lapangan`, `nib`, `admin_input`. Padahal mereka bisa melihat ringkasan data mereka sendiri dalam bentuk chart.
+### Masalah Kritis yang Masih Ada
 
-#### 4. AppLayout - Sidebar menampilkan "HalalTrack" hardcoded
-Meskipun ada setting `app_name` di AppSettings, sidebar masih menampilkan "HalalTrack" hardcoded (line 103, 164). Seharusnya fetch dari `app_settings`.
+**1. Semua RLS Policy di Seluruh Tabel Masih RESTRICTIVE**
 
-#### 5. AppSettings - Simpan commission_rates menggunakan UPDATE tanpa INSERT
-Jika role belum ada di tabel `commission_rates`, UPDATE tidak akan melakukan apa-apa. Seharusnya gunakan UPSERT.
+Ini adalah masalah **paling kritis**. Tabel-tabel berikut memiliki SEMUA policy bertipe RESTRICTIVE (Permissive: No). Di PostgreSQL, data hanya bisa diakses jika ada minimal 1 policy PERMISSIVE. Jika semua RESTRICTIVE, tidak ada data yang bisa diakses.
 
-#### 6. AppSettings - Simpan field_access juga hanya UPDATE
-Sama seperti commission_rates, jika row belum ada di `field_access`, UPDATE tidak menyimpan perubahan baru.
+Tabel yang terdampak:
+- `app_settings` — semua 3 policy RESTRICTIVE
+- `audit_logs` — semua 4 policy RESTRICTIVE
+- `commission_rates` — semua 3 policy RESTRICTIVE
+- `commissions` — semua 9 policy RESTRICTIVE
+- `data_entries` — semua 10 policy RESTRICTIVE
+- `disbursements` — semua 4 policy RESTRICTIVE
+- `entry_photos` — semua 7 policy RESTRICTIVE
+- `field_access` — semua 4 policy RESTRICTIVE
+- `group_members` — semua 4 policy RESTRICTIVE
+- `groups` — semua 4 policy RESTRICTIVE
+- `notifications` — semua 3 policy RESTRICTIVE
+- `platform_billing` — semua 2 policy RESTRICTIVE
+- `shared_links` — semua 6 policy RESTRICTIVE
 
-#### 7. Komisi - Admin bisa "Cairkan" tapi tidak ada konfirmasi
-Tombol "Cairkan Semua Pending" langsung mengeksekusi tanpa dialog konfirmasi. Ini berbahaya karena bisa mengubah banyak data sekaligus.
+**Solusi**: Satu migration besar yang drop semua policy RESTRICTIVE dan recreate sebagai PERMISSIVE, mempertahankan logic USING/WITH CHECK yang sama.
 
-#### 8. UsersManagement - Hapus user tanpa konfirmasi
-Tombol delete langsung memanggil `handleDelete` tanpa dialog konfirmasi.
+**2. GroupDetail — Realtime tidak difilter per user (Bug #2)**
 
----
+Realtime subscription tidak memfilter `created_by` untuk non-admin roles. Perlu ditambahkan filter agar user non-admin hanya menerima event untuk entry miliknya sendiri.
 
-### B. Perbaikan UX yang Dibutuhkan
+**3. Dashboard — Chart tersembunyi untuk role selain admin (Bug #3)**
 
-#### 1. Dashboard per Role lebih informatif
-- **Lapangan**: Tampilkan jumlah data yang di-input hari ini, minggu ini, bulan ini. Tampilkan progress bar target (jika ada).
-- **NIB**: Tampilkan antrian data yang perlu di-proses NIB-nya (status `siap_input`).
-- **Admin Input**: Tampilkan data yang perlu di-input (status `siap_input`).
-- Semua role: Tampilkan chart status masing-masing, bukan hanya super_admin/admin.
+Statistik chart hanya ditampilkan untuk `super_admin`/`owner`. Role `lapangan`, `nib`, `admin_input` juga seharusnya bisa melihat chart data mereka sendiri.
 
-#### 2. GroupDetail - Tampilan tabel tidak responsive
-Tabel entri bisa sangat lebar di mobile. Perlu scroll horizontal yang lebih jelas atau card view untuk mobile.
+### Rencana Implementasi
 
-#### 3. ShareLinks - Tidak ada statistik per link
-Admin/lapangan tidak tahu berapa banyak data yang masuk dari setiap share link. Perlu counter "X data masuk via link ini".
+**Step 1: Migration — Fix semua RLS policy (KRITIS)**
+- Satu file SQL migration
+- Drop + recreate semua policy di 13 tabel sebagai PERMISSIVE
+- Tidak mengubah logic akses, hanya mengubah tipe dari RESTRICTIVE ke PERMISSIVE
 
-#### 4. Profile - Tidak menampilkan role user
-Halaman profile tidak menunjukkan role user saat ini.
+**Step 2: GroupDetail — Filter realtime per user**
+- Di `src/pages/GroupDetail.tsx`, tambahkan filter `created_by` pada realtime subscription callback untuk non-admin/owner
 
-#### 5. Public Form - Tidak ada loading state saat submit
-Form publik tidak menampilkan loading indicator saat data sedang dikirim.
+**Step 3: Dashboard — Tampilkan chart untuk semua role**
+- Di `src/pages/Dashboard.tsx`, hapus kondisi role pada bagian chart sehingga semua role bisa melihat ringkasan data mereka
 
----
-
-### C. Fitur yang Dibutuhkan
-
-#### Untuk Admin (super_admin/admin)
-
-1. **Dashboard ringkasan kinerja per admin**
-   - Super admin bisa melihat berapa banyak data yang diinput oleh masing-masing admin lapangan dalam periode tertentu.
-   - Ranking/leaderboard admin berdasarkan jumlah input.
-
-2. **Notifikasi untuk admin**
-   - Saat data baru masuk via share link, admin yang membuat link mendapat notifikasi.
-   - Saat status berubah, admin terkait mendapat notifikasi.
-
-3. **Bulk edit/delete entries**
-   - Bulk delete sudah bisa di-support tapi belum ada tombolnya.
-   - Bulk assign PIC ke entry tertentu.
-
-4. **Export data lebih lengkap**
-   - Export dengan foto (ZIP) sudah ada, tapi export CSV belum menyertakan tracking code dan nama PIC.
-
-5. **Statistik share link**
-   - Jumlah klik dan data yang masuk per share link.
-
-6. **Log aktivitas global**
-   - Super admin bisa melihat semua audit log lintas group, bukan hanya per group.
-
-#### Untuk UMKM
-
-1. **Progress timeline/tracker visual**
-   - Tampilkan timeline visual dari proses sertifikasi (belum lengkap → siap input → ... → sertifikat selesai), bukan hanya badge status.
-
-2. **Download dokumen sendiri**
-   - UMKM bisa download NIB dan sertifikat halal mereka langsung dari dashboard.
-
-3. **Hubungi petugas**
-   - Tombol WhatsApp/kontak langsung ke petugas lapangan yang menangani data mereka.
-
-4. **Riwayat perubahan status**
-   - UMKM bisa melihat kapan status mereka berubah dan oleh siapa.
-
----
-
-### D. Prioritas Implementasi yang Disarankan
-
-| Prioritas | Item | Kategori |
-|-----------|------|----------|
-| Tinggi | Fix useState → useEffect di DataEntryForm | Bug |
-| Tinggi | Fix realtime filter di GroupDetail | Bug |
-| Tinggi | Konfirmasi sebelum cairkan komisi & hapus user | UX |
-| Tinggi | Fetch app_name & logo di sidebar | Bug |
-| Sedang | Chart untuk semua role di Dashboard | UX |
-| Sedang | Upsert untuk commission_rates & field_access | Bug |
-| Sedang | Progress timeline untuk UMKM | Fitur |
-| Sedang | Statistik per share link | Fitur |
-| Sedang | Dashboard kinerja admin untuk super_admin | Fitur |
-| Rendah | Notifikasi admin | Fitur |
-| Rendah | Export CSV lebih lengkap | Fitur |
-| Rendah | Kontak petugas untuk UMKM | Fitur |
+### Prioritas
+1. **Step 1** harus dilakukan pertama karena tanpa ini, hampir semua query dari client akan mengembalikan data kosong
+2. Step 2 dan 3 bisa dilakukan bersamaan setelah Step 1
 
