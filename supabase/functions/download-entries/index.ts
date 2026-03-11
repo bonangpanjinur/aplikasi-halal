@@ -36,16 +36,38 @@ serve(async (req) => {
     }
 
     const callerId = user.id;
-    const { data: callerRole } = await supabaseAdmin
+    const { data: callerRoleData } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", callerId)
       .single();
 
-    // Buat daftar role yang diizinkan untuk mendownload data
-    const allowedRoles = ["super_admin", "admin", "owner", "admin_input"];
+    if (!callerRoleData) {
+      return new Response(JSON.stringify({ error: "Forbidden: User role not found" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    if (!callerRole || !allowedRoles.includes(callerRole.role)) {
+    const callerRole = callerRoleData.role;
+
+    // Pengecekan dinamis: super_admin selalu bisa download,
+    // Role lain harus memiliki 'can_view' pada field_name 'download' di tabel field_access
+    let canDownload = callerRole === "super_admin";
+
+    if (!canDownload) {
+      const { data: access } = await supabaseAdmin
+        .from("field_access")
+        .select("can_view")
+        .eq("role", callerRole)
+        .eq("field_name", "download")
+        .single();
+      
+      if (access?.can_view) {
+        canDownload = true;
+      }
+    }
+
+    if (!canDownload) {
       return new Response(JSON.stringify({ error: "Forbidden: Insufficient access to download data" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
