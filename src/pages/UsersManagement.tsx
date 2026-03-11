@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, KeyRound, UserCog } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -23,6 +24,7 @@ interface UserWithRole {
 }
 
 export default function UsersManagement() {
+  const { role: myRole } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [open, setOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -30,6 +32,21 @@ export default function UsersManagement() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<AppRole>("lapangan");
   const [creating, setCreating] = useState(false);
+
+  // Edit user state
+  const [editUserId, setEditUserId] = useState<string | null>(null);
+  const [editPassword, setEditPassword] = useState("");
+  const [editRole, setEditRole] = useState<AppRole | "">("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
+
+  const isOwner = myRole === "owner";
+  const isSuperAdmin = myRole === "super_admin";
+
+  // Roles that the current user can assign
+  const assignableRoles: AppRole[] = isOwner
+    ? ["admin", "admin_input", "lapangan", "nib", "umkm"]
+    : ["admin", "admin_input", "lapangan", "nib", "umkm", "owner"];
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
@@ -53,7 +70,6 @@ export default function UsersManagement() {
     e.preventDefault();
     setCreating(true);
 
-    // Use edge function to create user (super admin creates accounts)
     const { data, error } = await supabase.functions.invoke("create-user", {
       body: { email: newEmail, password: newPassword, full_name: newName, role: newRole },
     });
@@ -84,9 +100,39 @@ export default function UsersManagement() {
     }
   };
 
+  const handleUpdate = async () => {
+    if (!editUserId) return;
+    setUpdating(true);
+
+    const body: any = { user_id: editUserId };
+    if (editPassword) body.password = editPassword;
+    if (editRole) body.role = editRole;
+
+    const { data, error } = await supabase.functions.invoke("update-user", { body });
+
+    setUpdating(false);
+    if (error || data?.error) {
+      toast({ title: "Gagal mengubah user", description: error?.message || data?.error, variant: "destructive" });
+    } else {
+      toast({ title: "User berhasil diubah" });
+      setEditOpen(false);
+      setEditUserId(null);
+      setEditPassword("");
+      setEditRole("");
+      fetchUsers();
+    }
+  };
+
+  const canManageUser = (userRole: AppRole | null) => {
+    if (isSuperAdmin) return userRole !== "super_admin";
+    if (isOwner) return userRole !== "super_admin" && userRole !== "owner";
+    return false;
+  };
+
   const roleBadgeVariant = (role: AppRole | null) => {
     switch (role) {
       case "super_admin": return "default";
+      case "owner": return "default";
       case "admin": return "secondary";
       case "admin_input": return "secondary";
       case "lapangan": return "outline";
@@ -125,11 +171,9 @@ export default function UsersManagement() {
                 <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="admin_input">Admin Input</SelectItem>
-                    <SelectItem value="lapangan">Lapangan</SelectItem>
-                    <SelectItem value="nib">NIB</SelectItem>
-                    <SelectItem value="umkm">UMKM</SelectItem>
+                    {assignableRoles.map((r) => (
+                      <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -141,6 +185,35 @@ export default function UsersManagement() {
         </Dialog>
       </div>
 
+      {/* Edit User Dialog */}
+      <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) { setEditUserId(null); setEditPassword(""); setEditRole(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ubah User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Password Baru (kosongkan jika tidak diubah)</Label>
+              <Input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} minLength={6} placeholder="Password baru..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Role Baru (kosongkan jika tidak diubah)</Label>
+              <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
+                <SelectTrigger><SelectValue placeholder="Pilih role..." /></SelectTrigger>
+                <SelectContent>
+                  {assignableRoles.map((r) => (
+                    <SelectItem key={r} value={r}>{r.replace("_", " ")}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" onClick={handleUpdate} disabled={updating || (!editPassword && !editRole)}>
+              {updating ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -149,7 +222,7 @@ export default function UsersManagement() {
                 <TableHead>Nama</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead className="w-16"></TableHead>
+                <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -163,26 +236,41 @@ export default function UsersManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {u.role !== "super_admin" && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Hapus User</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Yakin ingin menghapus {u.full_name || u.email}? Tindakan ini tidak bisa dibatalkan.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                    {canManageUser(u.role) && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Ubah password / role"
+                          onClick={() => {
+                            setEditUserId(u.id);
+                            setEditPassword("");
+                            setEditRole("");
+                            setEditOpen(true);
+                          }}
+                        >
+                          <UserCog className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Hapus User</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Yakin ingin menghapus {u.full_name || u.email}? Tindakan ini tidak bisa dibatalkan.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
