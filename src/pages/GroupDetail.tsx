@@ -432,7 +432,7 @@ export default function GroupDetail() {
             }
           } else if (payload.eventType === "DELETE") {
             const deleted = payload.old as DataEntry;
-            if (role !== "super_admin" && user && (deleted as any).created_by !== user.id) return;
+            if (role !== "super_admin" && role !== "owner" && user && (deleted as any).created_by !== user.id) return;
             setEntries((prev) => prev.filter((e) => e.id !== deleted.id));
           }
         }
