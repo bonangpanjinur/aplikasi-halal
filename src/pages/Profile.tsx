@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, KeyRound, User, Mail, ShieldCheck } from "lucide-react";
+import { Loader2, Save, KeyRound, User, Mail, ShieldCheck, Copy } from "lucide-react";
 
 export default function Profile() {
   const { user, role } = useAuth();
