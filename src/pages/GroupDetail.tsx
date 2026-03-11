@@ -350,12 +350,14 @@ export default function GroupDetail() {
     }
 
     const statusLabel = (s: string) => STATUS_CONFIG[s]?.label || s;
-    const headers = ["Nama", "Status", "Alamat", "Nomor HP", "KTP", "NIB", "Foto Produk", "Foto Verifikasi", "Tanggal Dibuat"];
+    const headers = ["Nama", "Status", "Alamat", "Nomor HP", "Email", "Kata Sandi", "KTP", "NIB", "Foto Produk", "Foto Verifikasi", "Tanggal Dibuat"];
     const rows = dataToExport.map((e) => [
       e.nama || "",
       statusLabel(e.status),
       e.alamat || "",
       e.nomor_hp || "",
+      (e as any).email || "",
+      (e as any).kata_sandi || "",
       e.ktp_url || "",
       e.nib_url || "",
       e.foto_produk_url || "",
