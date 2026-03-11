@@ -24,7 +24,7 @@ const COLOR_PRESETS = [
   { label: "Merah Tegas", value: "0 84% 50%" },
 ];
 
-const ROLES = [
+const ALL_ROLES = [
   { key: "super_admin", label: "Super Admin" },
   { key: "owner", label: "Owner" },
   { key: "admin", label: "Admin" },
@@ -286,7 +286,7 @@ export default function AppSettings() {
           <TabsTrigger value="tampilan" className="flex-1 gap-2">
             <Palette className="h-4 w-4" /> Tampilan
           </TabsTrigger>
-          {isOwner && (
+          {(isOwner || isSuperAdmin) && (
             <TabsTrigger value="akses" className="flex-1 gap-2">
               <ShieldCheck className="h-4 w-4" /> Hak Akses
             </TabsTrigger>
@@ -413,39 +413,45 @@ export default function AppSettings() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {ROLES.map((r) => (
-                    <div key={r.key} className="space-y-3">
-                      <h3 className="font-semibold text-sm border-b pb-2">{r.label}</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {FIELDS.map((f) => {
-                          const perms = localAccess[r.key]?.[f.key] || { can_view: false, can_edit: false };
-                          return (
-                            <div key={f.key} className="flex items-center justify-between rounded-lg border p-3">
-                              <span className="text-sm font-medium">{f.label}</span>
-                              <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-1.5">
-                                  <Switch
-                                    checked={perms.can_view}
-                                    onCheckedChange={() => toggleAccess(r.key, f.key, "can_view")}
-                                    className="scale-90"
-                                  />
-                                  <span className="text-xs text-muted-foreground">View</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <Switch
-                                    checked={perms.can_edit}
-                                    onCheckedChange={() => toggleAccess(r.key, f.key, "can_edit")}
-                                    className="scale-90"
-                                  />
-                                  <span className="text-xs text-muted-foreground">Edit</span>
+                  {(() => {
+                    // Owner tidak bisa mengatur akses super_admin (pemilik platform)
+                    const editableRoles = isOwner
+                      ? ALL_ROLES.filter((r) => r.key !== "super_admin")
+                      : ALL_ROLES;
+                    return editableRoles.map((r) => (
+                      <div key={r.key} className="space-y-3">
+                        <h3 className="font-semibold text-sm border-b pb-2">{r.label}</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {FIELDS.map((f) => {
+                            const perms = localAccess[r.key]?.[f.key] || { can_view: false, can_edit: false };
+                            return (
+                              <div key={f.key} className="flex items-center justify-between rounded-lg border p-3">
+                                <span className="text-sm font-medium">{f.label}</span>
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center gap-1.5">
+                                    <Switch
+                                      checked={perms.can_view}
+                                      onCheckedChange={() => toggleAccess(r.key, f.key, "can_view")}
+                                      className="scale-90"
+                                    />
+                                    <span className="text-xs text-muted-foreground">View</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <Switch
+                                      checked={perms.can_edit}
+                                      onCheckedChange={() => toggleAccess(r.key, f.key, "can_edit")}
+                                      className="scale-90"
+                                    />
+                                    <span className="text-xs text-muted-foreground">Edit</span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
               )}
             </CardContent>
@@ -518,7 +524,7 @@ export default function AppSettings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {ROLES.map((r) => (
+              {ALL_ROLES.map((r) => (
                 <div key={r.key} className="flex items-center justify-between rounded-lg border p-3">
                   <span className="text-sm font-medium">{r.label}</span>
                   <div className="flex items-center gap-2">
