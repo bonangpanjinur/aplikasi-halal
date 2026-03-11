@@ -731,7 +731,7 @@ export default function GroupDetail() {
           )}
         </TabsContent>
 
-        {(role === "super_admin" || role === "admin") && (
+        {(role === "super_admin" || role === "owner" || role === "admin") && (
           <TabsContent value="members" className="mt-4">
             {role === "super_admin" && (
               <div className="mb-4">
