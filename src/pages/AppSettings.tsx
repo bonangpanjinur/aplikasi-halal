@@ -531,7 +531,7 @@ export default function AppSettings() {
                 <Wallet className="h-5 w-5" /> Tarif Komisi per Role
               </CardTitle>
               <CardDescription>
-                Atur jumlah komisi (Rupiah) per data baru yang berhasil diinput oleh masing-masing role
+                Atur jumlah komisi (Rupiah) yang diberikan Owner kepada setiap role per data yang berhasil diproses
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
