@@ -162,6 +162,7 @@ export type Database = {
           nib_url: string | null
           nomor_hp: string | null
           pic_user_id: string | null
+          referred_by: string | null
           sertifikat_url: string | null
           source_link_id: string | null
           status: Database["public"]["Enums"]["entry_status"]
@@ -184,6 +185,7 @@ export type Database = {
           nib_url?: string | null
           nomor_hp?: string | null
           pic_user_id?: string | null
+          referred_by?: string | null
           sertifikat_url?: string | null
           source_link_id?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
@@ -206,6 +208,7 @@ export type Database = {
           nib_url?: string | null
           nomor_hp?: string | null
           pic_user_id?: string | null
+          referred_by?: string | null
           sertifikat_url?: string | null
           source_link_id?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
@@ -461,6 +464,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          referral_code: string | null
           updated_at: string
         }
         Insert: {
@@ -468,6 +472,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          referral_code?: string | null
           updated_at?: string
         }
         Update: {
@@ -475,6 +480,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          referral_code?: string | null
           updated_at?: string
         }
         Relationships: []
