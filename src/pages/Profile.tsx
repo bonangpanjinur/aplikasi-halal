@@ -13,6 +13,7 @@ import { Loader2, Save, KeyRound, User, Mail, ShieldCheck, Copy } from "lucide-r
 export default function Profile() {
   const { user, role } = useAuth();
   const [fullName, setFullName] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [email, setEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
