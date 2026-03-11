@@ -531,6 +531,96 @@ export default function AppSettings() {
             Simpan Tarif Komisi
           </Button>
         </TabsContent>
+
+        {/* Platform Billing Tab - Super Admin only */}
+        {isSuperAdmin && (
+          <TabsContent value="billing" className="space-y-6 mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CreditCard className="h-5 w-5" /> Kelola Billing Owner
+                </CardTitle>
+                <CardDescription>
+                  Atur jenis pembayaran dan tarif untuk setiap Owner
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-4 items-end">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Owner</Label>
+                    <Select value={newBillingOwner} onValueChange={setNewBillingOwner}>
+                      <SelectTrigger><SelectValue placeholder="Pilih owner..." /></SelectTrigger>
+                      <SelectContent>
+                        {ownerUsers.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.full_name || u.email || u.id.slice(0, 8)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Jenis Billing</Label>
+                    <Select value={newBillingType} onValueChange={setNewBillingType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="per_sertifikat">Per Sertifikat</SelectItem>
+                        <SelectItem value="per_bulan">Per Bulan</SelectItem>
+                        <SelectItem value="per_group">Per Group</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tarif (Rp)</Label>
+                    <Input
+                      type="number"
+                      value={newBillingAmount}
+                      onChange={(e) => setNewBillingAmount(parseInt(e.target.value) || 0)}
+                      min={0}
+                      step={1000}
+                      className="font-mono"
+                    />
+                  </div>
+                  <Button onClick={handleSaveBilling} disabled={savingBilling || !newBillingOwner}>
+                    {savingBilling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+                    Tambah
+                  </Button>
+                </div>
+
+                {billingRecords.length > 0 && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Owner</TableHead>
+                        <TableHead>Jenis</TableHead>
+                        <TableHead>Tarif</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Tanggal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {billingRecords.map((b: any) => {
+                        const ownerProfile = ownerUsers.find((u) => u.id === b.owner_user_id);
+                        return (
+                          <TableRow key={b.id}>
+                            <TableCell className="font-medium">{ownerProfile?.full_name || ownerProfile?.email || b.owner_user_id.slice(0, 8)}</TableCell>
+                            <TableCell>{b.billing_type?.replace("_", " ")}</TableCell>
+                            <TableCell className="font-mono">Rp {b.amount?.toLocaleString("id-ID")}</TableCell>
+                            <TableCell>
+                              <Badge variant={b.status === "active" ? "default" : "secondary"}>{b.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("id-ID")}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+                {billingRecords.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">Belum ada data billing</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
