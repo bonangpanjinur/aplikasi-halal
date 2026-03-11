@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, KeyRound, UserCog } from "lucide-react";
+import { Plus, Trash2, UserCog } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -20,12 +20,14 @@ interface UserWithRole {
   id: string;
   full_name: string | null;
   email: string | null;
-  role: AppRole | null;
+  role: AppRole;
+  profileSynced: boolean;
 }
 
 export default function UsersManagement() {
   const { role: myRole } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
@@ -33,7 +35,6 @@ export default function UsersManagement() {
   const [newRole, setNewRole] = useState<AppRole>("lapangan");
   const [creating, setCreating] = useState(false);
 
-  // Edit user state
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [editPassword, setEditPassword] = useState("");
   const [editRole, setEditRole] = useState<AppRole | "">("");
@@ -43,23 +44,56 @@ export default function UsersManagement() {
   const isOwner = myRole === "owner";
   const isSuperAdmin = myRole === "super_admin";
 
-  // Roles that the current user can assign
   const assignableRoles: AppRole[] = isOwner
     ? ["admin", "admin_input", "lapangan", "nib", "umkm"]
     : ["admin", "admin_input", "lapangan", "nib", "umkm", "owner"];
 
   const fetchUsers = async () => {
-    const { data: profiles } = await supabase.from("profiles").select("*");
-    const { data: roles } = await supabase.from("user_roles").select("*");
+    setLoading(true);
+    try {
+      // Primary source: user_roles
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
 
-    const roleMap = new Map(roles?.map((r) => [r.user_id, r.role]));
-    const merged: UserWithRole[] = (profiles ?? []).map((p) => ({
-      id: p.id,
-      full_name: p.full_name,
-      email: p.email,
-      role: roleMap.get(p.id) ?? null,
-    }));
-    setUsers(merged);
+      if (rolesError) {
+        toast({ title: "Gagal memuat data user", description: rolesError.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      if (!roles || roles.length === 0) {
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+
+      const userIds = roles.map((r) => r.user_id);
+
+      // Enrichment: profiles (optional)
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+
+      const merged: UserWithRole[] = roles.map((r) => {
+        const profile = profileMap.get(r.user_id);
+        return {
+          id: r.user_id,
+          full_name: profile?.full_name ?? null,
+          email: profile?.email ?? null,
+          role: r.role,
+          profileSynced: !!profile,
+        };
+      });
+
+      setUsers(merged);
+    } catch (err) {
+      toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -137,13 +171,14 @@ export default function UsersManagement() {
 
   const roleBadgeVariant = (role: AppRole | null) => {
     switch (role) {
-      case "super_admin": return "default";
-      case "owner": return "default";
-      case "admin": return "secondary";
-      case "admin_input": return "secondary";
-      case "lapangan": return "outline";
-      case "nib": return "outline";
-      default: return "outline";
+      case "super_admin":
+      case "owner":
+        return "default" as const;
+      case "admin":
+      case "admin_input":
+        return "secondary" as const;
+      default:
+        return "outline" as const;
     }
   };
 
@@ -192,7 +227,6 @@ export default function UsersManagement() {
         </Dialog>
       </div>
 
-      {/* Edit User Dialog */}
       <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) { setEditUserId(null); setEditPassword(""); setEditRole(""); } }}>
         <DialogContent>
           <DialogHeader>
@@ -234,61 +268,72 @@ export default function UsersManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.full_name || "-"}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={roleBadgeVariant(u.role)}>
-                      {u.role?.replace("_", " ") ?? "No role"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {canManageUser(u.role) && (
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Ubah password / role"
-                          onClick={() => {
-                            setEditUserId(u.id);
-                            setEditPassword("");
-                            setEditRole("");
-                            setEditOpen(true);
-                          }}
-                        >
-                          <UserCog className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus User</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Yakin ingin menghapus {u.full_name || u.email}? Tindakan ini tidak bisa dibatalkan.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    )}
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                    Memuat data...
                   </TableCell>
                 </TableRow>
-              ))}
-              {users.length === 0 && (
+              ) : users.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                     Belum ada user
                   </TableCell>
                 </TableRow>
+              ) : (
+                users.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell className="font-medium">
+                      {u.full_name || (u.profileSynced ? "-" : <span className="text-muted-foreground italic text-xs">Belum sinkron</span>)}
+                    </TableCell>
+                    <TableCell>
+                      {u.email || (u.profileSynced ? "-" : <span className="text-muted-foreground italic text-xs">-</span>)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={roleBadgeVariant(u.role)}>
+                        {u.role?.replace("_", " ") ?? "No role"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {canManageUser(u.role) && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Ubah password / role"
+                            onClick={() => {
+                              setEditUserId(u.id);
+                              setEditPassword("");
+                              setEditRole("");
+                              setEditOpen(true);
+                            }}
+                          >
+                            <UserCog className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Hapus User</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Yakin ingin menghapus {u.full_name || u.email || u.id}? Tindakan ini tidak bisa dibatalkan.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>

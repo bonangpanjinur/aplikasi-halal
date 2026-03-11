@@ -63,15 +63,30 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: createError.message }), { status: 400, headers: corsHeaders });
     }
 
+    const userId = newUser.user.id;
+
+    // Insert role
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
-      .insert({ user_id: newUser.user.id, role });
+      .insert({ user_id: userId, role });
 
     if (roleError) {
+      // Rollback: delete the auth user
+      await supabaseAdmin.auth.admin.deleteUser(userId);
       return new Response(JSON.stringify({ error: roleError.message }), { status: 400, headers: corsHeaders });
     }
 
-    return new Response(JSON.stringify({ user: { id: newUser.user.id, email } }), {
+    // Upsert profile to ensure consistency
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .upsert({ id: userId, full_name: full_name || "", email }, { onConflict: "id" });
+
+    if (profileError) {
+      // Non-fatal: role and auth are already created, profile will sync via trigger
+      console.error("Profile upsert failed:", profileError.message);
+    }
+
+    return new Response(JSON.stringify({ user: { id: userId, email } }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
