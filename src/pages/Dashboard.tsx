@@ -292,6 +292,18 @@ export default function Dashboard() {
     { label: "Total User", value: stats.users, icon: Users, show: role === "super_admin" || role === "owner" },
     { label: "Link Aktif", value: stats.links, icon: Link2, show: true },
   ];
+  const formatRupiah = (n: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
+  const BILLING_TYPE_LABELS: Record<string, string> = {
+    per_sertifikat: "Per Sertifikat",
+    per_bulan: "Per Bulan",
+    per_group: "Per Group",
+  };
+
+  const commissionBarConfig: ChartConfig = {
+    amount: { label: "Komisi", color: "hsl(var(--primary))" },
+  };
 
   const totalEntries = statusData.reduce((s, d) => s + d.count, 0);
 
