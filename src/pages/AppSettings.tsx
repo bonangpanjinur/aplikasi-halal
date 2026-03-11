@@ -238,13 +238,34 @@ export default function AppSettings() {
     toast({ title: "Tarif komisi berhasil disimpan" });
   };
 
-  if (role !== "super_admin") {
+  if (!isSuperAdmin && !isOwner) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-muted-foreground">Hanya Super Admin yang bisa mengakses halaman ini.</p>
+        <p className="text-muted-foreground">Anda tidak memiliki akses ke halaman ini.</p>
       </div>
     );
   }
+
+  const handleSaveBilling = async () => {
+    if (!newBillingOwner) return;
+    setSavingBilling(true);
+    const { error } = await supabase.from("platform_billing" as any).insert({
+      owner_user_id: newBillingOwner,
+      billing_type: newBillingType,
+      amount: newBillingAmount,
+    } as any);
+    setSavingBilling(false);
+    if (error) {
+      toast({ title: "Gagal menyimpan billing", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Billing berhasil ditambahkan" });
+      setNewBillingOwner("");
+      setNewBillingAmount(0);
+      // Refresh
+      const { data } = await supabase.from("platform_billing" as any).select("*").order("created_at", { ascending: false });
+      setBillingRecords(data ?? []);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
