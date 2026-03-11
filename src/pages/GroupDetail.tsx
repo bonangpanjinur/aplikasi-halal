@@ -118,7 +118,7 @@ export default function GroupDetail() {
   const fetchEntries = async () => {
     if (!groupId) return;
     let query = supabase.from("data_entries").select("*").eq("group_id", groupId).order("created_at", { ascending: false });
-    if (role !== "super_admin" && user) query = query.eq("created_by", user.id);
+    if (role !== "super_admin" && role !== "owner" && user) query = query.eq("created_by", user.id);
     const { data } = await query;
     setEntries(data ?? []);
     // Fetch photo counts
