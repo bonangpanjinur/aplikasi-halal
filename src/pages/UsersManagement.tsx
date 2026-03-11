@@ -77,7 +77,13 @@ export default function UsersManagement() {
     setCreating(false);
 
     if (error || data?.error) {
-      toast({ title: "Gagal membuat user", description: error?.message || data?.error, variant: "destructive" });
+      const errMsg = error?.message || data?.error || "";
+      const isEmailTaken = errMsg.toLowerCase().includes("already been registered") || errMsg.toLowerCase().includes("already registered");
+      toast({
+        title: isEmailTaken ? "Email sudah terdaftar" : "Gagal membuat user",
+        description: isEmailTaken ? "Email tersebut sudah digunakan oleh user lain. Gunakan email yang berbeda." : errMsg,
+        variant: "destructive",
+      });
     } else {
       toast({ title: "User berhasil dibuat" });
       setOpen(false);
