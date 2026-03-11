@@ -28,11 +28,14 @@ export default function Profile() {
     // Fetch profile
     supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, referral_code" as any)
       .eq("id", user.id)
       .single()
-      .then(({ data }) => {
-        if (data) setFullName(data.full_name ?? "");
+      .then(({ data }: any) => {
+        if (data) {
+          setFullName(data.full_name ?? "");
+          setReferralCode(data.referral_code ?? "");
+        }
       });
   }, [user]);
 
