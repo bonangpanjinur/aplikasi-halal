@@ -31,6 +31,7 @@ const ALL_ROLES = [
   { key: "admin_input", label: "Admin Input" },
   { key: "lapangan", label: "Lapangan" },
   { key: "nib", label: "NIB" },
+  { key: "umkm", label: "UMKM" },
 ];
 
 const FIELDS = [
