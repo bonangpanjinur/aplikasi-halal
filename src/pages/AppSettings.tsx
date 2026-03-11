@@ -286,7 +286,7 @@ export default function AppSettings() {
           <TabsTrigger value="tampilan" className="flex-1 gap-2">
             <Palette className="h-4 w-4" /> Tampilan
           </TabsTrigger>
-          {isOwner && (
+          {(isOwner || isSuperAdmin) && (
             <TabsTrigger value="akses" className="flex-1 gap-2">
               <ShieldCheck className="h-4 w-4" /> Hak Akses
             </TabsTrigger>
