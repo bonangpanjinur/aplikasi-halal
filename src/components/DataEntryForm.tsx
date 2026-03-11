@@ -355,6 +355,20 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           </div>
         )}
 
+        {canEditField("email") && (
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contoh@email.com" />
+          </div>
+        )}
+
+        {canEditField("kata_sandi") && (
+          <div className="space-y-2">
+            <Label>Kata Sandi</Label>
+            <Input value={kataSandi} onChange={(e) => setKataSandi(e.target.value)} placeholder="Kata sandi akun" />
+          </div>
+        )}
+
         {canEditField("nib") && (
           <div className="space-y-2">
             <Label>NIB (PDF / Foto)</Label>
