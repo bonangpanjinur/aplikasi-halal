@@ -554,7 +554,7 @@ export default function AppSettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-4 items-end">
+                <div className="grid gap-3 sm:grid-cols-5 items-end">
                   <div className="space-y-1">
                     <Label className="text-xs">Owner</Label>
                     <Select value={newBillingOwner} onValueChange={setNewBillingOwner}>
@@ -585,6 +585,16 @@ export default function AppSettings() {
                       onChange={(e) => setNewBillingAmount(parseInt(e.target.value) || 0)}
                       min={0}
                       step={1000}
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Trial (hari)</Label>
+                    <Input
+                      type="number"
+                      value={newTrialDays}
+                      onChange={(e) => setNewTrialDays(parseInt(e.target.value) || 7)}
+                      min={0}
                       className="font-mono"
                     />
                   </div>
