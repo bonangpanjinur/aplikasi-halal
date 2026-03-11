@@ -28,10 +28,10 @@ export default function Register() {
     // Validate referral code if provided
     let picUserId: string | null = null;
     if (referralCode.trim()) {
-      const { data: refProfile } = await supabase
+      const { data: refProfile } = await (supabase
         .from("profiles")
-        .select("id")
-        .eq("referral_code" as any, referralCode.trim().toUpperCase())
+        .select("id") as any)
+        .eq("referral_code", referralCode.trim().toUpperCase())
         .single();
       if (!refProfile) {
         toast({ title: "Kode referral tidak valid", variant: "destructive" });
