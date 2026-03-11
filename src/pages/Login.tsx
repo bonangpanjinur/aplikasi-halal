@@ -34,7 +34,7 @@ export default function Login() {
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-md">
             <Shield className="h-7 w-7 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">HalalTrack</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">Masuk</CardTitle>
           <CardDescription>Masuk ke akun Anda</CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,7 +69,7 @@ export default function Login() {
             <Link to="/register">
               <Button variant="secondary" size="sm" className="w-full gap-2 mb-2">
                 <Store className="h-3.5 w-3.5" />
-                Daftar Akun UMKM
+                Daftar Akun UMKM/SPPG
               </Button>
             </Link>
             <p className="text-xs text-muted-foreground">Punya kode tracking sertifikat?</p>

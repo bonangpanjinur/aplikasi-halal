@@ -6,7 +6,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check, Download, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
+
+const STATUS_STEPS = [
+  { key: "belum_lengkap", label: "Belum Lengkap", icon: Clock },
+  { key: "siap_input", label: "Siap Input", icon: CheckCircle2 },
+  { key: "terverifikasi", label: "Terverifikasi", icon: ShieldCheck },
+  { key: "nib_selesai", label: "NIB Selesai", icon: FileCheck },
+  { key: "pengajuan", label: "Pengajuan", icon: Send },
+  { key: "sertifikat_selesai", label: "Sertifikat Selesai", icon: Award },
+];
+
+const STATUS_ORDER: Record<string, number> = {};
+STATUS_STEPS.forEach((s, i) => { STATUS_ORDER[s.key] = i; });
+
+// Extra statuses that are warnings/blockers
+const WARNING_STATUSES: Record<string, string> = {
+  ktp_terdaftar_nib: "KTP Terdaftar NIB",
+  ktp_terdaftar_sertifikat: "KTP Terdaftar Sertifikat",
+};
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
@@ -45,6 +62,58 @@ interface Notification {
   created_at: string;
 }
 
+function ProgressTimeline({ status }: { status: string }) {
+  const isWarning = status in WARNING_STATUSES;
+  const currentIndex = isWarning ? -1 : (STATUS_ORDER[status] ?? -1);
+
+  return (
+    <div className="mt-4">
+      {isWarning && (
+        <div className="flex items-center gap-2 mb-3 rounded-lg bg-destructive/10 border border-destructive/20 p-2.5">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+          <span className="text-sm text-destructive font-medium">{WARNING_STATUSES[status]}</span>
+        </div>
+      )}
+      <div className="relative flex items-center justify-between">
+        {/* Background line */}
+        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-muted rounded-full z-0" />
+        {/* Progress line */}
+        {currentIndex > 0 && (
+          <div
+            className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full z-0 transition-all duration-500"
+            style={{ width: `${(currentIndex / (STATUS_STEPS.length - 1)) * 100}%` }}
+          />
+        )}
+        {STATUS_STEPS.map((step, i) => {
+          const StepIcon = step.icon;
+          const isDone = i <= currentIndex;
+          const isCurrent = i === currentIndex;
+          return (
+            <div key={step.key} className="relative z-10 flex flex-col items-center" style={{ width: `${100 / STATUS_STEPS.length}%` }}>
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                  isCurrent
+                    ? "bg-primary border-primary text-primary-foreground scale-110 shadow-md"
+                    : isDone
+                    ? "bg-primary/80 border-primary/80 text-primary-foreground"
+                    : "bg-background border-muted-foreground/30 text-muted-foreground"
+                }`}
+              >
+                <StepIcon className="h-3.5 w-3.5" />
+              </div>
+              <span className={`mt-1.5 text-[9px] sm:text-[10px] text-center leading-tight max-w-[60px] ${
+                isCurrent ? "font-semibold text-primary" : isDone ? "text-foreground" : "text-muted-foreground"
+              }`}>
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function UmkmDashboard() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<UmkmEntry[]>([]);
@@ -73,7 +142,6 @@ export default function UmkmDashboard() {
       setEntries(entriesData);
       setNotifications((notifRes.data as unknown as Notification[]) ?? []);
 
-      // Fetch officer profiles
       const officerIds = [...new Set(entriesData.map(e => e.created_by).filter(Boolean))] as string[];
       if (officerIds.length > 0) {
         const { data: profiles } = await supabase
@@ -89,7 +157,6 @@ export default function UmkmDashboard() {
     };
     fetchData();
 
-    // Realtime
     const channel = supabase
       .channel("umkm-notif-dashboard")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
@@ -213,7 +280,10 @@ export default function UmkmDashboard() {
                   )}
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  {/* Progress Timeline */}
+                  <ProgressTimeline status={entry.status} />
+
+                  <div className="grid grid-cols-2 gap-4 text-sm mt-4">
                     <div>
                       <span className="text-muted-foreground">NIB:</span>{" "}
                       {entry.nib_url ? (
@@ -232,7 +302,6 @@ export default function UmkmDashboard() {
                     </div>
                   </div>
 
-                  {/* Download & Contact buttons */}
                   <div className="flex flex-wrap gap-2 mt-3">
                     {entry.nib_url && (
                       <Button variant="outline" size="sm" className="gap-1.5" asChild>

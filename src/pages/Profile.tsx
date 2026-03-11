@@ -8,11 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, KeyRound, User, Mail, ShieldCheck } from "lucide-react";
+import { Loader2, Save, KeyRound, User, Mail, ShieldCheck, Copy } from "lucide-react";
 
 export default function Profile() {
   const { user, role } = useAuth();
   const [fullName, setFullName] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [email, setEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -27,11 +28,14 @@ export default function Profile() {
     // Fetch profile
     supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, referral_code" as any)
       .eq("id", user.id)
       .single()
-      .then(({ data }) => {
-        if (data) setFullName(data.full_name ?? "");
+      .then(({ data }: any) => {
+        if (data) {
+          setFullName(data.full_name ?? "");
+          setReferralCode(data.referral_code ?? "");
+        }
       });
   }, [user]);
 
@@ -102,6 +106,23 @@ export default function Profile() {
               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Role:</span>
               <Badge variant="secondary" className="capitalize">{role.replace("_", " ")}</Badge>
+            </div>
+          )}
+          {referralCode && (role === "owner" || role === "admin" || role === "super_admin" || role === "lapangan") && (
+            <div className="flex items-center gap-2 rounded-lg border p-3 bg-muted/30">
+              <span className="text-sm text-muted-foreground">Kode Referral:</span>
+              <code className="font-mono font-bold text-primary">{referralCode}</code>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => {
+                  navigator.clipboard.writeText(referralCode);
+                  toast({ title: "Kode referral disalin!" });
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
             </div>
           )}
           <div className="space-y-2">
