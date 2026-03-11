@@ -32,46 +32,56 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
-    const callerId = caller.id;
     const { data: callerRole } = await supabaseAdmin
       .from("user_roles")
       .select("role")
-      .eq("user_id", callerId)
+      .eq("user_id", caller.id)
       .single();
 
     const callerRoleValue = callerRole?.role;
-
     if (callerRoleValue !== "super_admin" && callerRoleValue !== "owner") {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
     }
 
-    const { email, password, full_name, role } = await req.json();
+    const { user_id, password, role } = await req.json();
 
-    // Owner cannot create super_admin or owner
-    if (callerRoleValue === "owner" && (role === "super_admin" || role === "owner")) {
-      return new Response(JSON.stringify({ error: "Owner tidak bisa membuat role super_admin atau owner" }), { status: 403, headers: corsHeaders });
-    }
-
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name },
-    });
-
-    if (createError) {
-      return new Response(JSON.stringify({ error: createError.message }), { status: 400, headers: corsHeaders });
-    }
-
-    const { error: roleError } = await supabaseAdmin
+    // Check target user's role
+    const { data: targetRole } = await supabaseAdmin
       .from("user_roles")
-      .insert({ user_id: newUser.user.id, role });
+      .select("role")
+      .eq("user_id", user_id)
+      .single();
 
-    if (roleError) {
-      return new Response(JSON.stringify({ error: roleError.message }), { status: 400, headers: corsHeaders });
+    // Owner cannot modify super_admin or owner
+    if (callerRoleValue === "owner" && (targetRole?.role === "super_admin" || targetRole?.role === "owner")) {
+      return new Response(JSON.stringify({ error: "Owner tidak bisa mengubah super_admin atau owner" }), { status: 403, headers: corsHeaders });
     }
 
-    return new Response(JSON.stringify({ user: { id: newUser.user.id, email } }), {
+    // Owner cannot assign super_admin or owner role
+    if (callerRoleValue === "owner" && role && (role === "super_admin" || role === "owner")) {
+      return new Response(JSON.stringify({ error: "Owner tidak bisa menetapkan role super_admin atau owner" }), { status: 403, headers: corsHeaders });
+    }
+
+    // Update password if provided
+    if (password) {
+      const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(user_id, { password });
+      if (pwError) {
+        return new Response(JSON.stringify({ error: pwError.message }), { status: 400, headers: corsHeaders });
+      }
+    }
+
+    // Update role if provided
+    if (role) {
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .update({ role })
+        .eq("user_id", user_id);
+      if (roleError) {
+        return new Response(JSON.stringify({ error: roleError.message }), { status: 400, headers: corsHeaders });
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
