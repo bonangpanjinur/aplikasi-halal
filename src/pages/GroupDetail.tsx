@@ -58,6 +58,7 @@ interface MemberWithProfile {
 export default function GroupDetail() {
   const { id: groupId } = useParams<{ id: string }>();
   const { role, user } = useAuth();
+  const { canView } = useFieldAccess();
   const [group, setGroup] = useState<Tables<"groups"> | null>(null);
   const [entries, setEntries] = useState<DataEntry[]>([]);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
