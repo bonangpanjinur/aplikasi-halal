@@ -415,7 +415,7 @@ export default function GroupDetail() {
           if (payload.eventType === "INSERT") {
             const newEntry = payload.new as DataEntry;
             // Non-super_admin only sees own entries
-            if (role !== "super_admin" && user && (newEntry as any).created_by !== user.id) return;
+            if (role !== "super_admin" && role !== "owner" && user && (newEntry as any).created_by !== user.id) return;
             setEntries((prev) => [newEntry, ...prev]);
             toast({ title: "Data baru masuk", description: newEntry.nama || "Entri baru ditambahkan" });
           } else if (payload.eventType === "UPDATE") {
