@@ -235,7 +235,7 @@ export default function GroupDetail() {
     fetchGroup();
     fetchEntries();
     fetchMembers();
-    if (role === "super_admin" || role === "admin") {
+    if (role === "super_admin" || role === "owner" || role === "admin") {
       fetchAuditLogs();
     }
   }, [groupId, role]);
