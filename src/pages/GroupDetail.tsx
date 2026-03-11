@@ -647,8 +647,8 @@ export default function GroupDetail() {
                             </TableCell>
                             <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{e.alamat || "-"}</TableCell>
                             <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
-                            <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email || "-"}</TableCell>
-                            <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).kata_sandi || "-"}</TableCell>
+                            {canView("email") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email || "-"}</TableCell>}
+                            {canView("kata_sandi") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).kata_sandi || "-"}</TableCell>}
                             <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{e.nib_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{(e as any).sertifikat_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>

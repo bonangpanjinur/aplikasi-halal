@@ -191,6 +191,7 @@ export default function UsersManagement() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Ubah User</DialogTitle>
+            <DialogDescription>Ubah password atau role user.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
