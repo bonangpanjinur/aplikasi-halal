@@ -49,6 +49,7 @@ export default function UmkmDashboard() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<UmkmEntry[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [officers, setOfficers] = useState<Record<string, OfficerProfile>>({});
   const [loading, setLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -58,7 +59,7 @@ export default function UmkmDashboard() {
       const [entriesRes, notifRes] = await Promise.all([
         supabase
           .from("data_entries")
-          .select("id, nama, status, tracking_code, nib_url, sertifikat_url, created_at")
+          .select("id, nama, status, tracking_code, nib_url, sertifikat_url, created_at, created_by")
           .eq("umkm_user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase
@@ -68,8 +69,22 @@ export default function UmkmDashboard() {
           .order("created_at", { ascending: false })
           .limit(20),
       ]);
-      setEntries(entriesRes.data ?? []);
+      const entriesData = (entriesRes.data ?? []) as UmkmEntry[];
+      setEntries(entriesData);
       setNotifications((notifRes.data as unknown as Notification[]) ?? []);
+
+      // Fetch officer profiles
+      const officerIds = [...new Set(entriesData.map(e => e.created_by).filter(Boolean))] as string[];
+      if (officerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, phone")
+          .in("id", officerIds);
+        const map: Record<string, OfficerProfile> = {};
+        (profiles ?? []).forEach((p: any) => { map[p.id] = p; });
+        setOfficers(map);
+      }
+
       setLoading(false);
     };
     fetchData();
