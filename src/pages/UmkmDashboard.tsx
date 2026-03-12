@@ -1,25 +1,28 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check, Download, MessageCircle } from "lucide-react";
+import {
+  Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award,
+  AlertTriangle, Search, Bell, Check, Download, MessageCircle,
+  ChevronDown, ChevronUp, History
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 const STATUS_STEPS = [
-  { key: "belum_lengkap", label: "Belum Lengkap", icon: Clock },
-  { key: "siap_input", label: "Siap Input", icon: CheckCircle2 },
-  { key: "terverifikasi", label: "Terverifikasi", icon: ShieldCheck },
-  { key: "nib_selesai", label: "NIB Selesai", icon: FileCheck },
-  { key: "pengajuan", label: "Pengajuan", icon: Send },
-  { key: "sertifikat_selesai", label: "Sertifikat Selesai", icon: Award },
+  { key: "belum_lengkap", label: "Data Terisi", description: "Data UMKM telah diinput ke sistem", icon: Clock },
+  { key: "siap_input", label: "Siap Input", description: "Data lengkap dan siap diproses", icon: CheckCircle2 },
+  { key: "terverifikasi", label: "Terverifikasi", description: "Data telah diverifikasi oleh admin", icon: ShieldCheck },
+  { key: "nib_selesai", label: "NIB Selesai", description: "NIB telah diupload dan diverifikasi", icon: FileCheck },
+  { key: "pengajuan", label: "Pengajuan", description: "Dokumen sertifikasi sedang diajukan", icon: Send },
+  { key: "sertifikat_selesai", label: "Sertifikat Selesai", description: "Sertifikat halal telah terbit", icon: Award },
 ];
 
 const STATUS_ORDER: Record<string, number> = {};
 STATUS_STEPS.forEach((s, i) => { STATUS_ORDER[s.key] = i; });
 
-// Extra statuses that are warnings/blockers
 const WARNING_STATUSES: Record<string, string> = {
   ktp_terdaftar_nib: "KTP Terdaftar NIB",
   ktp_terdaftar_sertifikat: "KTP Terdaftar Sertifikat",
@@ -62,9 +65,21 @@ interface Notification {
   created_at: string;
 }
 
-function ProgressTimeline({ status }: { status: string }) {
+interface AuditLog {
+  id: string;
+  entry_id: string;
+  old_status: string | null;
+  new_status: string;
+  changed_at: string;
+  changed_by: string | null;
+}
+
+function VerticalTimeline({ status, auditLogs }: { status: string; auditLogs: AuditLog[] }) {
   const isWarning = status in WARNING_STATUSES;
   const currentIndex = isWarning ? -1 : (STATUS_ORDER[status] ?? -1);
+  const progressPercent = Math.round(((currentIndex + 1) / STATUS_STEPS.length) * 100);
+
+  const [showHistory, setShowHistory] = useState(false);
 
   return (
     <div className="mt-4">
@@ -74,42 +89,102 @@ function ProgressTimeline({ status }: { status: string }) {
           <span className="text-sm text-destructive font-medium">{WARNING_STATUSES[status]}</span>
         </div>
       )}
-      <div className="relative flex items-center justify-between">
-        {/* Background line */}
-        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-muted rounded-full z-0" />
-        {/* Progress line */}
-        {currentIndex > 0 && (
+
+      {/* Progress bar summary */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
           <div
-            className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full z-0 transition-all duration-500"
-            style={{ width: `${(currentIndex / (STATUS_STEPS.length - 1)) * 100}%` }}
+            className="h-full bg-primary transition-all duration-700 ease-out rounded-full"
+            style={{ width: `${progressPercent}%` }}
           />
-        )}
-        {STATUS_STEPS.map((step, i) => {
+        </div>
+        <span className="text-xs text-muted-foreground font-medium shrink-0">{progressPercent}%</span>
+      </div>
+
+      {/* Vertical steps */}
+      <div className="space-y-0">
+        {STATUS_STEPS.map((step, idx) => {
+          const isComplete = idx <= currentIndex;
+          const isCurrent = idx === currentIndex;
           const StepIcon = step.icon;
-          const isDone = i <= currentIndex;
-          const isCurrent = i === currentIndex;
           return (
-            <div key={step.key} className="relative z-10 flex flex-col items-center" style={{ width: `${100 / STATUS_STEPS.length}%` }}>
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300 ${
-                  isCurrent
-                    ? "bg-primary border-primary text-primary-foreground scale-110 shadow-md"
-                    : isDone
-                    ? "bg-primary/80 border-primary/80 text-primary-foreground"
-                    : "bg-background border-muted-foreground/30 text-muted-foreground"
-                }`}
-              >
-                <StepIcon className="h-3.5 w-3.5" />
+            <div key={step.key} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-500 ${
+                    isComplete
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                      : isCurrent
+                      ? "border-primary/50 bg-primary/10 text-primary"
+                      : "border-muted-foreground/20 bg-muted text-muted-foreground/40"
+                  }`}
+                >
+                  {isComplete ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <StepIcon className="h-3.5 w-3.5" />
+                  )}
+                </div>
+                {idx < STATUS_STEPS.length - 1 && (
+                  <div
+                    className={`w-0.5 flex-1 min-h-[28px] transition-colors duration-500 ${
+                      isComplete ? "bg-primary" : "bg-muted-foreground/15"
+                    }`}
+                  />
+                )}
               </div>
-              <span className={`mt-1.5 text-[9px] sm:text-[10px] text-center leading-tight max-w-[60px] ${
-                isCurrent ? "font-semibold text-primary" : isDone ? "text-foreground" : "text-muted-foreground"
-              }`}>
-                {step.label}
-              </span>
+              <div className={`pb-5 pt-0.5 ${idx === STATUS_STEPS.length - 1 ? "pb-0" : ""}`}>
+                <p className={`font-medium text-sm leading-tight ${
+                  isComplete ? "text-foreground" : isCurrent ? "text-foreground/80" : "text-muted-foreground"
+                }`}>
+                  {step.label}
+                  {isCurrent && (
+                    <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0">Saat ini</Badge>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
+                {isComplete && (
+                  <p className="text-[11px] text-primary mt-0.5 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Selesai
+                  </p>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
+
+      {/* Audit log history */}
+      {auditLogs.length > 0 && (
+        <div className="mt-4 border-t pt-3">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+          >
+            <History className="h-3.5 w-3.5" />
+            <span className="font-medium">Riwayat Perubahan ({auditLogs.length})</span>
+            {showHistory ? <ChevronUp className="h-3 w-3 ml-auto" /> : <ChevronDown className="h-3 w-3 ml-auto" />}
+          </button>
+          {showHistory && (
+            <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto">
+              {auditLogs.map((log) => {
+                const oldLabel = STATUS_CONFIG[log.old_status ?? ""]?.label || log.old_status || "—";
+                const newLabel = STATUS_CONFIG[log.new_status]?.label || log.new_status;
+                return (
+                  <div key={log.id} className="text-xs flex items-start gap-2 py-1 px-2 rounded bg-muted/50">
+                    <span className="text-muted-foreground shrink-0">
+                      {new Date(log.changed_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                    </span>
+                    <span>
+                      {oldLabel} → <span className="font-medium">{newLabel}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -119,6 +194,7 @@ export default function UmkmDashboard() {
   const [entries, setEntries] = useState<UmkmEntry[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [officers, setOfficers] = useState<Record<string, OfficerProfile>>({});
+  const [auditLogs, setAuditLogs] = useState<Record<string, AuditLog[]>>({});
   const [loading, setLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -132,7 +208,7 @@ export default function UmkmDashboard() {
           .eq("umkm_user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase
-          .from("notifications" as any)
+          .from("notifications")
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
@@ -142,15 +218,44 @@ export default function UmkmDashboard() {
       setEntries(entriesData);
       setNotifications((notifRes.data as unknown as Notification[]) ?? []);
 
+      const entryIds = entriesData.map(e => e.id);
       const officerIds = [...new Set(entriesData.map(e => e.created_by).filter(Boolean))] as string[];
+
+      const promises: Promise<any>[] = [];
+
       if (officerIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, phone")
-          .in("id", officerIds);
+        promises.push(
+          supabase.from("profiles").select("id, full_name, phone").in("id", officerIds)
+        );
+      }
+
+      if (entryIds.length > 0) {
+        promises.push(
+          supabase.from("audit_logs").select("id, entry_id, old_status, new_status, changed_at, changed_by")
+            .in("entry_id", entryIds)
+            .order("changed_at", { ascending: false })
+        );
+      }
+
+      const results = await Promise.all(promises);
+      let resultIdx = 0;
+
+      if (officerIds.length > 0) {
+        const profiles = results[resultIdx]?.data ?? [];
         const map: Record<string, OfficerProfile> = {};
-        (profiles ?? []).forEach((p: any) => { map[p.id] = p; });
+        profiles.forEach((p: any) => { map[p.id] = p; });
         setOfficers(map);
+        resultIdx++;
+      }
+
+      if (entryIds.length > 0) {
+        const logs = (results[resultIdx]?.data ?? []) as AuditLog[];
+        const logMap: Record<string, AuditLog[]> = {};
+        logs.forEach((l) => {
+          if (!logMap[l.entry_id]) logMap[l.entry_id] = [];
+          logMap[l.entry_id].push(l);
+        });
+        setAuditLogs(logMap);
       }
 
       setLoading(false);
@@ -167,13 +272,13 @@ export default function UmkmDashboard() {
   }, [user]);
 
   const markAsRead = async (id: string) => {
-    await supabase.from("notifications" as any).update({ is_read: true }).eq("id", id);
+    await supabase.from("notifications").update({ is_read: true } as any).eq("id", id);
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
   };
 
   const markAllAsRead = async () => {
     if (!user) return;
-    await supabase.from("notifications" as any).update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
+    await supabase.from("notifications").update({ is_read: true } as any).eq("user_id", user.id).eq("is_read", false);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   };
 
@@ -276,12 +381,15 @@ export default function UmkmDashboard() {
                     </Badge>
                   </div>
                   {entry.tracking_code && (
-                    <p className="text-xs text-muted-foreground font-mono">{entry.tracking_code}</p>
+                    <CardDescription className="font-mono text-xs">{entry.tracking_code}</CardDescription>
                   )}
                 </CardHeader>
                 <CardContent>
-                  {/* Progress Timeline */}
-                  <ProgressTimeline status={entry.status} />
+                  {/* Vertical Progress Timeline */}
+                  <VerticalTimeline
+                    status={entry.status}
+                    auditLogs={auditLogs[entry.id] ?? []}
+                  />
 
                   <div className="grid grid-cols-2 gap-4 text-sm mt-4">
                     <div>
