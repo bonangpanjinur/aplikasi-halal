@@ -221,35 +221,23 @@ export default function UmkmDashboard() {
       const entryIds = entriesData.map(e => e.id);
       const officerIds = [...new Set(entriesData.map(e => e.created_by).filter(Boolean))] as string[];
 
-      const promises: Promise<any>[] = [];
+      if (officerIds.length > 0 || entryIds.length > 0) {
+        const [profilesRes, logsRes] = await Promise.all([
+          officerIds.length > 0
+            ? supabase.from("profiles").select("id, full_name, phone").in("id", officerIds)
+            : Promise.resolve({ data: [] }),
+          entryIds.length > 0
+            ? supabase.from("audit_logs").select("id, entry_id, old_status, new_status, changed_at, changed_by")
+                .in("entry_id", entryIds)
+                .order("changed_at", { ascending: false })
+            : Promise.resolve({ data: [] }),
+        ]);
 
-      if (officerIds.length > 0) {
-        promises.push(
-          supabase.from("profiles").select("id, full_name, phone").in("id", officerIds)
-        );
-      }
-
-      if (entryIds.length > 0) {
-        promises.push(
-          supabase.from("audit_logs").select("id, entry_id, old_status, new_status, changed_at, changed_by")
-            .in("entry_id", entryIds)
-            .order("changed_at", { ascending: false })
-        );
-      }
-
-      const results = await Promise.all(promises);
-      let resultIdx = 0;
-
-      if (officerIds.length > 0) {
-        const profiles = results[resultIdx]?.data ?? [];
         const map: Record<string, OfficerProfile> = {};
-        profiles.forEach((p: any) => { map[p.id] = p; });
+        (profilesRes.data ?? []).forEach((p: any) => { map[p.id] = p; });
         setOfficers(map);
-        resultIdx++;
-      }
 
-      if (entryIds.length > 0) {
-        const logs = (results[resultIdx]?.data ?? []) as AuditLog[];
+        const logs = (logsRes.data ?? []) as AuditLog[];
         const logMap: Record<string, AuditLog[]> = {};
         logs.forEach((l) => {
           if (!logMap[l.entry_id]) logMap[l.entry_id] = [];
