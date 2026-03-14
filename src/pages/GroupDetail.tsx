@@ -357,6 +357,10 @@ export default function GroupDetail() {
     const headers = ["Nama", "Status", "Alamat", "Nomor HP"];
     if (canView("email")) headers.push("Email");
     if (canView("kata_sandi")) headers.push("Kata Sandi");
+    if (canView("email_halal")) headers.push("Email Halal");
+    if (canView("sandi_halal")) headers.push("Sandi Halal");
+    if (canView("email_nib")) headers.push("Email NIB");
+    if (canView("sandi_nib")) headers.push("Sandi NIB");
     headers.push("KTP", "NIB", "Foto Produk", "Foto Verifikasi", "Tanggal Dibuat");
     const rows = dataToExport.map((e) => {
       const row = [
