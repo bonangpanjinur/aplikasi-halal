@@ -38,6 +38,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   ktp_terdaftar_sertifikat: { label: "KTP Terdaftar Sertifikat", variant: "destructive", icon: AlertTriangle },
   pengajuan: { label: "Pengajuan", variant: "outline", icon: Send },
   sertifikat_selesai: { label: "Sertifikat Selesai", variant: "default", icon: Award },
+  revisi: { label: "Revisi", variant: "destructive", icon: AlertTriangle },
 };
 
 interface UmkmEntry {
