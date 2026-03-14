@@ -56,6 +56,7 @@ const STATUS_BG: Record<string, string> = {
   ktp_terdaftar_sertifikat: "bg-orange-100 dark:bg-orange-950",
   pengajuan: "bg-purple-100 dark:bg-purple-950",
   sertifikat_selesai: "bg-emerald-100 dark:bg-emerald-950",
+  revisi: "bg-pink-100 dark:bg-pink-950",
 };
 
 const STATUS_TEXT: Record<string, string> = {
