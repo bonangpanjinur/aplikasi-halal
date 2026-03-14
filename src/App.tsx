@@ -18,6 +18,7 @@ import PublicStats from "@/pages/PublicStats";
 import Profile from "@/pages/Profile";
 import AppSettings from "@/pages/AppSettings";
 import Komisi from "@/pages/Komisi";
+import Tagihan from "@/pages/Tagihan";
 import UmkmDashboard from "@/pages/UmkmDashboard";
 import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
