@@ -665,6 +665,10 @@ export default function GroupDetail() {
                             <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
                             {canView("email") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email || "-"}</TableCell>}
                             {canView("kata_sandi") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).kata_sandi || "-"}</TableCell>}
+                            {canView("email_halal") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email_halal || "-"}</TableCell>}
+                            {canView("sandi_halal") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).sandi_halal || "-"}</TableCell>}
+                            {canView("email_nib") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email_nib || "-"}</TableCell>}
+                            {canView("sandi_nib") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).sandi_nib || "-"}</TableCell>}
                             <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{e.nib_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{(e as any).sertifikat_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
