@@ -19,6 +19,7 @@ import {
   Wallet,
   ClipboardList,
   Bell,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
