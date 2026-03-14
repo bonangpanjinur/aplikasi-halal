@@ -30,6 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
   ktp_terdaftar_sertifikat: "KTP Terdaftar Sertifikat",
   pengajuan: "Pengajuan",
   sertifikat_selesai: "Sertifikat Selesai",
+  revisi: "Revisi",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -42,6 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
   ktp_terdaftar_sertifikat: "hsl(15 85% 50%)",
   pengajuan: "hsl(270 60% 55%)",
   sertifikat_selesai: "hsl(160 84% 39%)",
+  revisi: "hsl(340 75% 55%)",
 };
 
 const STATUS_BG: Record<string, string> = {
@@ -54,6 +56,7 @@ const STATUS_BG: Record<string, string> = {
   ktp_terdaftar_sertifikat: "bg-orange-100 dark:bg-orange-950",
   pengajuan: "bg-purple-100 dark:bg-purple-950",
   sertifikat_selesai: "bg-emerald-100 dark:bg-emerald-950",
+  revisi: "bg-pink-100 dark:bg-pink-950",
 };
 
 const STATUS_TEXT: Record<string, string> = {
@@ -64,6 +67,7 @@ const STATUS_TEXT: Record<string, string> = {
   nib_selesai: "text-blue-700 dark:text-blue-400",
   pengajuan: "text-purple-700 dark:text-purple-400",
   sertifikat_selesai: "text-emerald-700 dark:text-emerald-400",
+  revisi: "text-pink-700 dark:text-pink-400",
 };
 
 const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -84,6 +88,7 @@ const pieChartConfig: ChartConfig = {
   nib_selesai: { label: "NIB Selesai", color: STATUS_COLORS.nib_selesai },
   pengajuan: { label: "Pengajuan", color: STATUS_COLORS.pengajuan },
   sertifikat_selesai: { label: "Sertifikat Selesai", color: STATUS_COLORS.sertifikat_selesai },
+  revisi: { label: "Revisi", color: STATUS_COLORS.revisi },
 };
 
 const statusBarConfig: ChartConfig = pieChartConfig;
@@ -101,6 +106,10 @@ const FIELD_LABELS: Record<string, string> = {
   nomor_hp: "No. HP",
   email: "Email",
   kata_sandi: "Kata Sandi",
+  email_halal: "Email Halal",
+  sandi_halal: "Sandi Halal",
+  email_nib: "Email NIB",
+  sandi_nib: "Sandi NIB",
   ktp: "KTP",
   nib: "NIB",
   foto_produk: "Foto Produk",
@@ -114,6 +123,10 @@ const FIELD_TO_COLUMN: Record<string, string> = {
   nomor_hp: "nomor_hp",
   email: "email",
   kata_sandi: "kata_sandi",
+  email_halal: "email_halal",
+  sandi_halal: "sandi_halal",
+  email_nib: "email_nib",
+  sandi_nib: "sandi_nib",
   ktp: "ktp_url",
   nib: "nib_url",
   foto_produk: "foto_produk_url",

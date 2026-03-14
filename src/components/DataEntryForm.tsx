@@ -89,6 +89,10 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const [nomorHp, setNomorHp] = useState(entry?.nomor_hp ?? "");
   const [email, setEmail] = useState((entry as any)?.email ?? "");
   const [kataSandi, setKataSandi] = useState((entry as any)?.kata_sandi ?? "");
+  const [emailHalal, setEmailHalal] = useState((entry as any)?.email_halal ?? "");
+  const [sandiHalal, setSandiHalal] = useState((entry as any)?.sandi_halal ?? "");
+  const [emailNib, setEmailNib] = useState((entry as any)?.email_nib ?? "");
+  const [sandiNib, setSandiNib] = useState((entry as any)?.sandi_nib ?? "");
   const [saving, setSaving] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
 
@@ -173,6 +177,10 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     if (canEditField("nomor_hp")) payload.nomor_hp = nomorHp;
     if (canEditField("email")) payload.email = email;
     if (canEditField("kata_sandi")) payload.kata_sandi = kataSandi;
+    if (canEditField("email_halal")) payload.email_halal = emailHalal;
+    if (canEditField("sandi_halal")) payload.sandi_halal = sandiHalal;
+    if (canEditField("email_nib")) payload.email_nib = emailNib;
+    if (canEditField("sandi_nib")) payload.sandi_nib = sandiNib;
     if (canEditField("ktp") && ktp_url) payload.ktp_url = ktp_url;
     if (canEditField("nib") && nib_url) payload.nib_url = nib_url;
     if (canEditField("sertifikat") && sertifikat_url) payload.sertifikat_url = sertifikat_url;
@@ -366,6 +374,34 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           <div className="space-y-2">
             <Label>Kata Sandi</Label>
             <Input value={kataSandi} onChange={(e) => setKataSandi(e.target.value)} placeholder="Kata sandi akun" />
+          </div>
+        )}
+
+        {canEditField("email_halal") && (
+          <div className="space-y-2">
+            <Label>Email Halal</Label>
+            <Input type="email" value={emailHalal} onChange={(e) => setEmailHalal(e.target.value)} placeholder="Email akun halal" />
+          </div>
+        )}
+
+        {canEditField("sandi_halal") && (
+          <div className="space-y-2">
+            <Label>Sandi Halal</Label>
+            <Input value={sandiHalal} onChange={(e) => setSandiHalal(e.target.value)} placeholder="Sandi akun halal" />
+          </div>
+        )}
+
+        {canEditField("email_nib") && (
+          <div className="space-y-2">
+            <Label>Email NIB</Label>
+            <Input type="email" value={emailNib} onChange={(e) => setEmailNib(e.target.value)} placeholder="Email akun NIB" />
+          </div>
+        )}
+
+        {canEditField("sandi_nib") && (
+          <div className="space-y-2">
+            <Label>Sandi NIB</Label>
+            <Input value={sandiNib} onChange={(e) => setSandiNib(e.target.value)} placeholder="Sandi akun NIB" />
           </div>
         )}
 

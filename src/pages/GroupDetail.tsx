@@ -45,6 +45,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   ktp_terdaftar_sertifikat: { label: "KTP Terdaftar Sertifikat", variant: "destructive", icon: AlertTriangle },
   pengajuan: { label: "Pengajuan", variant: "outline", icon: Send },
   sertifikat_selesai: { label: "Sertifikat Selesai", variant: "default", icon: Award },
+  revisi: { label: "Revisi", variant: "destructive", icon: AlertTriangle },
 };
 
 interface MemberWithProfile {
@@ -89,7 +90,7 @@ export default function GroupDetail() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
 
-  const canDownload = role === "super_admin" || canView("download");
+  const canDownload = role === "super_admin" || role === "owner" || role === "admin" || role === "admin_input" || canView("download");
 
   // Role-based allowed status changes
   const ROLE_ALLOWED_STATUSES: Record<string, string[]> = {
@@ -99,6 +100,7 @@ export default function GroupDetail() {
     lapangan: [],
     nib: ["ktp_terdaftar_nib"],
     admin_input: ["nib_selesai", "ktp_terdaftar_sertifikat"],
+    umkm: [],
   };
   const allowedStatuses = ROLE_ALLOWED_STATUSES[role || ""] || [];
   const canChangeStatus = allowedStatuses.length > 0;
@@ -355,6 +357,10 @@ export default function GroupDetail() {
     const headers = ["Nama", "Status", "Alamat", "Nomor HP"];
     if (canView("email")) headers.push("Email");
     if (canView("kata_sandi")) headers.push("Kata Sandi");
+    if (canView("email_halal")) headers.push("Email Halal");
+    if (canView("sandi_halal")) headers.push("Sandi Halal");
+    if (canView("email_nib")) headers.push("Email NIB");
+    if (canView("sandi_nib")) headers.push("Sandi NIB");
     headers.push("KTP", "NIB", "Foto Produk", "Foto Verifikasi", "Tanggal Dibuat");
     const rows = dataToExport.map((e) => {
       const row = [
@@ -365,6 +371,10 @@ export default function GroupDetail() {
       ];
       if (canView("email")) row.push((e as any).email || "");
       if (canView("kata_sandi")) row.push((e as any).kata_sandi || "");
+      if (canView("email_halal")) row.push((e as any).email_halal || "");
+      if (canView("sandi_halal")) row.push((e as any).sandi_halal || "");
+      if (canView("email_nib")) row.push((e as any).email_nib || "");
+      if (canView("sandi_nib")) row.push((e as any).sandi_nib || "");
       row.push(
         e.ktp_url || "",
         e.nib_url || "",
@@ -595,8 +605,12 @@ export default function GroupDetail() {
                           <TableHead>Status</TableHead>
                           <TableHead>Alamat</TableHead>
                           <TableHead>No HP</TableHead>
-                          {canView("email") && <TableHead>Email</TableHead>}
-                          {canView("kata_sandi") && <TableHead>Kata Sandi</TableHead>}
+                           {canView("email") && <TableHead>Email</TableHead>}
+                           {canView("kata_sandi") && <TableHead>Kata Sandi</TableHead>}
+                           {canView("email_halal") && <TableHead>Email Halal</TableHead>}
+                           {canView("sandi_halal") && <TableHead>Sandi Halal</TableHead>}
+                           {canView("email_nib") && <TableHead>Email NIB</TableHead>}
+                           {canView("sandi_nib") && <TableHead>Sandi NIB</TableHead>}
                           <TableHead>KTP</TableHead>
                           <TableHead>NIB</TableHead>
                           <TableHead>Sertifikat</TableHead>
@@ -659,6 +673,10 @@ export default function GroupDetail() {
                             <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
                             {canView("email") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email || "-"}</TableCell>}
                             {canView("kata_sandi") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).kata_sandi || "-"}</TableCell>}
+                            {canView("email_halal") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email_halal || "-"}</TableCell>}
+                            {canView("sandi_halal") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).sandi_halal || "-"}</TableCell>}
+                            {canView("email_nib") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email_nib || "-"}</TableCell>}
+                            {canView("sandi_nib") && <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).sandi_nib || "-"}</TableCell>}
                             <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{e.nib_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{(e as any).sertifikat_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>

@@ -26,6 +26,7 @@ STATUS_STEPS.forEach((s, i) => { STATUS_ORDER[s.key] = i; });
 const WARNING_STATUSES: Record<string, string> = {
   ktp_terdaftar_nib: "KTP Terdaftar NIB",
   ktp_terdaftar_sertifikat: "KTP Terdaftar Sertifikat",
+  revisi: "Revisi — Data Anda perlu diperbaiki",
 };
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
@@ -38,6 +39,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   ktp_terdaftar_sertifikat: { label: "KTP Terdaftar Sertifikat", variant: "destructive", icon: AlertTriangle },
   pengajuan: { label: "Pengajuan", variant: "outline", icon: Send },
   sertifikat_selesai: { label: "Sertifikat Selesai", variant: "default", icon: Award },
+  revisi: { label: "Revisi", variant: "destructive", icon: AlertTriangle },
 };
 
 interface UmkmEntry {
