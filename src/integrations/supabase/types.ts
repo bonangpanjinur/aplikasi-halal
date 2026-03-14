@@ -152,6 +152,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           email: string | null
+          email_halal: string | null
+          email_nib: string | null
           foto_produk_url: string | null
           foto_verifikasi_url: string | null
           group_id: string
@@ -163,6 +165,8 @@ export type Database = {
           nomor_hp: string | null
           pic_user_id: string | null
           referred_by: string | null
+          sandi_halal: string | null
+          sandi_nib: string | null
           sertifikat_url: string | null
           source_link_id: string | null
           status: Database["public"]["Enums"]["entry_status"]
@@ -175,6 +179,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          email_halal?: string | null
+          email_nib?: string | null
           foto_produk_url?: string | null
           foto_verifikasi_url?: string | null
           group_id: string
@@ -186,6 +192,8 @@ export type Database = {
           nomor_hp?: string | null
           pic_user_id?: string | null
           referred_by?: string | null
+          sandi_halal?: string | null
+          sandi_nib?: string | null
           sertifikat_url?: string | null
           source_link_id?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
@@ -198,6 +206,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          email_halal?: string | null
+          email_nib?: string | null
           foto_produk_url?: string | null
           foto_verifikasi_url?: string | null
           group_id?: string
@@ -209,6 +219,8 @@ export type Database = {
           nomor_hp?: string | null
           pic_user_id?: string | null
           referred_by?: string | null
+          sandi_halal?: string | null
+          sandi_nib?: string | null
           sertifikat_url?: string | null
           source_link_id?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
@@ -608,6 +620,7 @@ export type Database = {
         | "sertifikat_selesai"
         | "ktp_terdaftar_nib"
         | "ktp_terdaftar_sertifikat"
+        | "revisi"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -755,6 +768,7 @@ export const Constants = {
         "sertifikat_selesai",
         "ktp_terdaftar_nib",
         "ktp_terdaftar_sertifikat",
+        "revisi",
       ],
     },
   },
