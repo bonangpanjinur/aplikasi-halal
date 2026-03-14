@@ -1,112 +1,167 @@
 
 
-## Analisis Lengkap: Bug, Perbaikan UX, dan Kebutuhan Fitur
+## Rencana Perbaikan & Fitur Baru
 
-### A. Bug dan Masalah yang Ditemukan
-
-#### 1. DataEntryForm - `useState` digunakan salah untuk side-effect (line 115-127)
-`useState(() => { ... })` digunakan untuk fetch data existing photos. Ini harusnya `useEffect`. Ini bisa menyebabkan foto tidak dimuat ulang saat entry berubah.
-
-#### 2. GroupDetail - Realtime UPDATE tidak difilter per user
-Pada realtime subscription, event UPDATE dan DELETE tidak difilter berdasarkan `created_by` untuk non-super_admin. Jika user lain mengupdate entry di group yang sama, entry tersebut bisa muncul tiba-tiba di state user lain.
-
-#### 3. Dashboard - Chart hanya ditampilkan untuk super_admin/admin
-Line 296: `(role === "super_admin" || role === "admin")` menyembunyikan chart untuk role `lapangan`, `nib`, `admin_input`. Padahal mereka bisa melihat ringkasan data mereka sendiri dalam bentuk chart.
-
-#### 4. AppLayout - Sidebar menampilkan "HalalTrack" hardcoded
-Meskipun ada setting `app_name` di AppSettings, sidebar masih menampilkan "HalalTrack" hardcoded (line 103, 164). Seharusnya fetch dari `app_settings`.
-
-#### 5. AppSettings - Simpan commission_rates menggunakan UPDATE tanpa INSERT
-Jika role belum ada di tabel `commission_rates`, UPDATE tidak akan melakukan apa-apa. Seharusnya gunakan UPSERT.
-
-#### 6. AppSettings - Simpan field_access juga hanya UPDATE
-Sama seperti commission_rates, jika row belum ada di `field_access`, UPDATE tidak menyimpan perubahan baru.
-
-#### 7. Komisi - Admin bisa "Cairkan" tapi tidak ada konfirmasi
-Tombol "Cairkan Semua Pending" langsung mengeksekusi tanpa dialog konfirmasi. Ini berbahaya karena bisa mengubah banyak data sekaligus.
-
-#### 8. UsersManagement - Hapus user tanpa konfirmasi
-Tombol delete langsung memanggil `handleDelete` tanpa dialog konfirmasi.
+Berdasarkan analisis mendalam terhadap kode, berikut rencana implementasi lengkap:
 
 ---
 
-### B. Perbaikan UX yang Dibutuhkan
+### 1. Database Migration — Field Baru & Status Revisi
 
-#### 1. Dashboard per Role lebih informatif
-- **Lapangan**: Tampilkan jumlah data yang di-input hari ini, minggu ini, bulan ini. Tampilkan progress bar target (jika ada).
-- **NIB**: Tampilkan antrian data yang perlu di-proses NIB-nya (status `siap_input`).
-- **Admin Input**: Tampilkan data yang perlu di-input (status `siap_input`).
-- Semua role: Tampilkan chart status masing-masing, bukan hanya super_admin/admin.
+**Kolom baru di `data_entries`:**
+- `email_halal` (text, nullable) — Email akun halal
+- `sandi_halal` (text, nullable) — Sandi akun halal
+- `email_nib` (text, nullable) — Email akun NIB
+- `sandi_nib` (text, nullable) — Sandi akun NIB
 
-#### 2. GroupDetail - Tampilan tabel tidak responsive
-Tabel entri bisa sangat lebar di mobile. Perlu scroll horizontal yang lebih jelas atau card view untuk mobile.
+**Status baru:**
+- Tambahkan `revisi` ke enum `entry_status`
 
-#### 3. ShareLinks - Tidak ada statistik per link
-Admin/lapangan tidak tahu berapa banyak data yang masuk dari setiap share link. Perlu counter "X data masuk via link ini".
-
-#### 4. Profile - Tidak menampilkan role user
-Halaman profile tidak menunjukkan role user saat ini.
-
-#### 5. Public Form - Tidak ada loading state saat submit
-Form publik tidak menampilkan loading indicator saat data sedang dikirim.
-
----
-
-### C. Fitur yang Dibutuhkan
-
-#### Untuk Admin (super_admin/admin)
-
-1. **Dashboard ringkasan kinerja per admin**
-   - Super admin bisa melihat berapa banyak data yang diinput oleh masing-masing admin lapangan dalam periode tertentu.
-   - Ranking/leaderboard admin berdasarkan jumlah input.
-
-2. **Notifikasi untuk admin**
-   - Saat data baru masuk via share link, admin yang membuat link mendapat notifikasi.
-   - Saat status berubah, admin terkait mendapat notifikasi.
-
-3. **Bulk edit/delete entries**
-   - Bulk delete sudah bisa di-support tapi belum ada tombolnya.
-   - Bulk assign PIC ke entry tertentu.
-
-4. **Export data lebih lengkap**
-   - Export dengan foto (ZIP) sudah ada, tapi export CSV belum menyertakan tracking code dan nama PIC.
-
-5. **Statistik share link**
-   - Jumlah klik dan data yang masuk per share link.
-
-6. **Log aktivitas global**
-   - Super admin bisa melihat semua audit log lintas group, bukan hanya per group.
-
-#### Untuk UMKM
-
-1. **Progress timeline/tracker visual**
-   - Tampilkan timeline visual dari proses sertifikasi (belum lengkap → siap input → ... → sertifikat selesai), bukan hanya badge status.
-
-2. **Download dokumen sendiri**
-   - UMKM bisa download NIB dan sertifikat halal mereka langsung dari dashboard.
-
-3. **Hubungi petugas**
-   - Tombol WhatsApp/kontak langsung ke petugas lapangan yang menangani data mereka.
-
-4. **Riwayat perubahan status**
-   - UMKM bisa melihat kapan status mereka berubah dan oleh siapa.
+**SQL Migration:**
+```sql
+ALTER TYPE public.entry_status ADD VALUE 'revisi';
+ALTER TABLE public.data_entries ADD COLUMN email_halal text;
+ALTER TABLE public.data_entries ADD COLUMN sandi_halal text;
+ALTER TABLE public.data_entries ADD COLUMN email_nib text;
+ALTER TABLE public.data_entries ADD COLUMN sandi_nib text;
+```
 
 ---
 
-### D. Prioritas Implementasi yang Disarankan
+### 2. Update Field Access System
 
-| Prioritas | Item | Kategori |
-|-----------|------|----------|
-| Tinggi | Fix useState → useEffect di DataEntryForm | Bug |
-| Tinggi | Fix realtime filter di GroupDetail | Bug |
-| Tinggi | Konfirmasi sebelum cairkan komisi & hapus user | UX |
-| Tinggi | Fetch app_name & logo di sidebar | Bug |
-| Sedang | Chart untuk semua role di Dashboard | UX |
-| Sedang | Upsert untuk commission_rates & field_access | Bug |
-| Sedang | Progress timeline untuk UMKM | Fitur |
-| Sedang | Statistik per share link | Fitur |
-| Sedang | Dashboard kinerja admin untuk super_admin | Fitur |
-| Rendah | Notifikasi admin | Fitur |
-| Rendah | Export CSV lebih lengkap | Fitur |
-| Rendah | Kontak petugas untuk UMKM | Fitur |
+**File: `src/pages/AppSettings.tsx`**
+
+Tambahkan field baru ke array `FIELDS`:
+```
+{ key: "email_halal", label: "Email Halal" }
+{ key: "sandi_halal", label: "Sandi Halal" }
+{ key: "email_nib", label: "Email NIB" }
+{ key: "sandi_nib", label: "Sandi NIB" }
+```
+
+Ini otomatis membuat field-field tersebut bisa diatur hak aksesnya (view/edit) per role dari tab Hak Akses.
+
+---
+
+### 3. Update DataEntryForm
+
+**File: `src/components/DataEntryForm.tsx`**
+
+- Tambahkan state untuk `emailHalal`, `sandiHalal`, `emailNib`, `sandiNib`
+- Render input fields berdasarkan `canEditField("email_halal")`, dst.
+- Sertakan dalam payload saat save/update
+- Update mapping di `FIELD_TO_COLUMN` untuk Dashboard dan GroupDetail
+
+---
+
+### 4. Status Revisi — Hak Akses & Logic
+
+**File: `src/pages/GroupDetail.tsx`**
+
+- Tambahkan `revisi` ke `STATUS_CONFIG` dengan label "Revisi", variant `destructive`, icon `AlertTriangle`
+- Update `ROLE_ALLOWED_STATUSES`: hanya `owner` dan `admin` boleh set status `revisi`
+  ```
+  owner: [...existing, "revisi"]
+  admin: [...existing, "revisi"]
+  ```
+- Role lain (lapangan, nib, admin_input) TIDAK bisa set revisi
+
+**File: `src/pages/Dashboard.tsx`**
+- Tambahkan `revisi` ke `STATUS_LABELS`, `STATUS_COLORS`, `STATUS_BG`, `STATUS_TEXT`, `pieChartConfig`
+
+**File: `src/pages/UmkmDashboard.tsx`**
+- Tambahkan `revisi` ke status timeline
+
+---
+
+### 5. Group — Hanya Owner yang Buat
+
+**File: `src/pages/Groups.tsx`**
+
+- Sembunyikan tombol "Buat Group" untuk role selain `owner` (dan `super_admin`)
+- Saat ini kemungkinan sudah ada kontrol, tapi perlu dipastikan hanya owner/super_admin yang melihat tombol create
+
+---
+
+### 6. Download Data — Owner, Admin, Admin Input
+
+**File: `src/pages/GroupDetail.tsx`**
+
+Update logika `canDownload`:
+```typescript
+const canDownload = role === "super_admin" || role === "owner" || role === "admin" || role === "admin_input" || canView("download");
+```
+
+---
+
+### 7. Navigasi Owner — Ganti Komisi → Tagihan
+
+**File: `src/components/AppLayout.tsx`**
+
+Ubah nav item `owner`:
+```typescript
+owner: [
+  { label: "Dashboard", ... },
+  { label: "Kelola User", ... },
+  { label: "Group Halal", ... },
+  { label: "Share Link", ... },
+  { label: "Tagihan", icon: Receipt, path: "/tagihan" },  // Ganti dari Komisi
+  { label: "Pengaturan", ... },
+],
+```
+
+---
+
+### 8. Halaman Tagihan Baru untuk Owner
+
+**File baru: `src/pages/Tagihan.tsx`**
+
+Halaman ini menampilkan:
+1. **Tagihan ke Aplikasi** — Data dari `platform_billing` yang terkait owner yang sedang login
+   - Tipe billing, jumlah, status, sisa trial
+2. **Tagihan ke Role** — Ringkasan komisi yang harus dibayar owner ke user-user yang didaftarkannya
+   - Ambil dari tabel `commissions` berdasarkan user yang berada di group milik owner
+   - Summary per role: total pending, total paid
+
+**Route:** Tambahkan `/tagihan` di `App.tsx` dengan `allowedRoles={["owner"]}`
+
+---
+
+### 9. Super Admin — Billing Settings
+
+**File: `src/pages/AppSettings.tsx`**
+
+Tab Billing Platform sudah ada, perlu ditambahkan:
+- Toggle "Gratis (Trial)" dengan input jumlah hari trial
+- Saat billing amount = 0 dan trial_days > 0, tampilkan sebagai "Trial Gratis"
+- Kolom ini sudah ada di database (`trial_days`, `trial_start`, `amount`)
+
+---
+
+### 10. UMKM — Hak Akses Diatur Owner
+
+**Sudah bisa dilakukan** via tab Hak Akses di AppSettings (role UMKM sudah ada di `ALL_ROLES`). Tidak perlu perubahan tambahan, cukup pastikan field baru (email_halal, sandi_halal, email_nib, sandi_nib) ikut terdaftar.
+
+---
+
+### Ringkasan File yang Diubah
+
+| File | Perubahan |
+|------|-----------|
+| `supabase/migrations/<new>.sql` | Tambah kolom + status revisi |
+| `src/components/DataEntryForm.tsx` | Field baru email/sandi halal & NIB |
+| `src/pages/AppSettings.tsx` | FIELDS array + billing trial toggle |
+| `src/pages/GroupDetail.tsx` | Status revisi + download access + field mapping |
+| `src/pages/Dashboard.tsx` | Status revisi di chart/labels |
+| `src/pages/UmkmDashboard.tsx` | Status revisi di timeline |
+| `src/components/AppLayout.tsx` | Nav owner: Komisi → Tagihan |
+| `src/pages/Tagihan.tsx` | Halaman tagihan baru |
+| `src/App.tsx` | Route /tagihan |
+| `src/pages/Groups.tsx` | Restrict create group to owner |
+
+### Ide Tambahan
+
+1. **Catatan revisi**: Saat owner/admin set status "revisi", bisa ditambahkan input alasan revisi yang tersimpan di `audit_logs` (kolom `notes`) agar UMKM tahu apa yang perlu diperbaiki.
+2. **Notifikasi revisi**: UMKM otomatis dapat notifikasi saat statusnya berubah ke "revisi" (sudah ter-cover oleh trigger `notify_umkm_on_status_change`, hanya perlu mapping label).
 
