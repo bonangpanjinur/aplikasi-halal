@@ -88,6 +88,7 @@ const pieChartConfig: ChartConfig = {
   nib_selesai: { label: "NIB Selesai", color: STATUS_COLORS.nib_selesai },
   pengajuan: { label: "Pengajuan", color: STATUS_COLORS.pengajuan },
   sertifikat_selesai: { label: "Sertifikat Selesai", color: STATUS_COLORS.sertifikat_selesai },
+  revisi: { label: "Revisi", color: STATUS_COLORS.revisi },
 };
 
 const statusBarConfig: ChartConfig = pieChartConfig;
