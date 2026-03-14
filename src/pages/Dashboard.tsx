@@ -30,6 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
   ktp_terdaftar_sertifikat: "KTP Terdaftar Sertifikat",
   pengajuan: "Pengajuan",
   sertifikat_selesai: "Sertifikat Selesai",
+  revisi: "Revisi",
 };
 
 const STATUS_COLORS: Record<string, string> = {
