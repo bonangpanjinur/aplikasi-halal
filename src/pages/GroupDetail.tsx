@@ -597,8 +597,12 @@ export default function GroupDetail() {
                           <TableHead>Status</TableHead>
                           <TableHead>Alamat</TableHead>
                           <TableHead>No HP</TableHead>
-                          {canView("email") && <TableHead>Email</TableHead>}
-                          {canView("kata_sandi") && <TableHead>Kata Sandi</TableHead>}
+                           {canView("email") && <TableHead>Email</TableHead>}
+                           {canView("kata_sandi") && <TableHead>Kata Sandi</TableHead>}
+                           {canView("email_halal") && <TableHead>Email Halal</TableHead>}
+                           {canView("sandi_halal") && <TableHead>Sandi Halal</TableHead>}
+                           {canView("email_nib") && <TableHead>Email NIB</TableHead>}
+                           {canView("sandi_nib") && <TableHead>Sandi NIB</TableHead>}
                           <TableHead>KTP</TableHead>
                           <TableHead>NIB</TableHead>
                           <TableHead>Sertifikat</TableHead>
