@@ -177,6 +177,10 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     if (canEditField("nomor_hp")) payload.nomor_hp = nomorHp;
     if (canEditField("email")) payload.email = email;
     if (canEditField("kata_sandi")) payload.kata_sandi = kataSandi;
+    if (canEditField("email_halal")) payload.email_halal = emailHalal;
+    if (canEditField("sandi_halal")) payload.sandi_halal = sandiHalal;
+    if (canEditField("email_nib")) payload.email_nib = emailNib;
+    if (canEditField("sandi_nib")) payload.sandi_nib = sandiNib;
     if (canEditField("ktp") && ktp_url) payload.ktp_url = ktp_url;
     if (canEditField("nib") && nib_url) payload.nib_url = nib_url;
     if (canEditField("sertifikat") && sertifikat_url) payload.sertifikat_url = sertifikat_url;
