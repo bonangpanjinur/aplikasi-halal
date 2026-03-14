@@ -43,6 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
   ktp_terdaftar_sertifikat: "hsl(15 85% 50%)",
   pengajuan: "hsl(270 60% 55%)",
   sertifikat_selesai: "hsl(160 84% 39%)",
+  revisi: "hsl(340 75% 55%)",
 };
 
 const STATUS_BG: Record<string, string> = {
