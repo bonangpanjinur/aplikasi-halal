@@ -377,6 +377,34 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           </div>
         )}
 
+        {canEditField("email_halal") && (
+          <div className="space-y-2">
+            <Label>Email Halal</Label>
+            <Input type="email" value={emailHalal} onChange={(e) => setEmailHalal(e.target.value)} placeholder="Email akun halal" />
+          </div>
+        )}
+
+        {canEditField("sandi_halal") && (
+          <div className="space-y-2">
+            <Label>Sandi Halal</Label>
+            <Input value={sandiHalal} onChange={(e) => setSandiHalal(e.target.value)} placeholder="Sandi akun halal" />
+          </div>
+        )}
+
+        {canEditField("email_nib") && (
+          <div className="space-y-2">
+            <Label>Email NIB</Label>
+            <Input type="email" value={emailNib} onChange={(e) => setEmailNib(e.target.value)} placeholder="Email akun NIB" />
+          </div>
+        )}
+
+        {canEditField("sandi_nib") && (
+          <div className="space-y-2">
+            <Label>Sandi NIB</Label>
+            <Input value={sandiNib} onChange={(e) => setSandiNib(e.target.value)} placeholder="Sandi akun NIB" />
+          </div>
+        )}
+
         {canEditField("nib") && (
           <div className="space-y-2">
             <Label>NIB (PDF / Foto)</Label>

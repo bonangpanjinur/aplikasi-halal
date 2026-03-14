@@ -67,6 +67,7 @@ const AppRoutes = () => (
     <Route path="/groups/:id" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
     <Route path="/share" element={<ProtectedRoute><ShareLinks /></ProtectedRoute>} />
     <Route path="/komisi" element={<ProtectedRoute><Komisi /></ProtectedRoute>} />
+    <Route path="/tagihan" element={<ProtectedRoute allowedRoles={["owner"]}><Tagihan /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin", "owner"]}><AppSettings /></ProtectedRoute>} />
     <Route path="/umkm" element={<ProtectedRoute allowedRoles={["umkm"]}><UmkmDashboard /></ProtectedRoute>} />

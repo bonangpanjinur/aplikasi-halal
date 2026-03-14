@@ -34,7 +34,7 @@ const NAV_ITEMS = {
     { label: "Kelola User", icon: Users, path: "/users" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
-    { label: "Komisi", icon: Wallet, path: "/komisi" },
+    { label: "Tagihan", icon: Receipt, path: "/tagihan" },
     { label: "Pengaturan", icon: Settings, path: "/settings" },
   ],
   admin: [

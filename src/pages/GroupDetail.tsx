@@ -371,6 +371,10 @@ export default function GroupDetail() {
       ];
       if (canView("email")) row.push((e as any).email || "");
       if (canView("kata_sandi")) row.push((e as any).kata_sandi || "");
+      if (canView("email_halal")) row.push((e as any).email_halal || "");
+      if (canView("sandi_halal")) row.push((e as any).sandi_halal || "");
+      if (canView("email_nib")) row.push((e as any).email_nib || "");
+      if (canView("sandi_nib")) row.push((e as any).sandi_nib || "");
       row.push(
         e.ktp_url || "",
         e.nib_url || "",
