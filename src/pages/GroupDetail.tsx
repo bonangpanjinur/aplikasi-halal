@@ -100,6 +100,7 @@ export default function GroupDetail() {
     lapangan: [],
     nib: ["ktp_terdaftar_nib"],
     admin_input: ["nib_selesai", "ktp_terdaftar_sertifikat"],
+    umkm: [],
   };
   const allowedStatuses = ROLE_ALLOWED_STATUSES[role || ""] || [];
   const canChangeStatus = allowedStatuses.length > 0;
