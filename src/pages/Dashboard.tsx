@@ -67,6 +67,7 @@ const STATUS_TEXT: Record<string, string> = {
   nib_selesai: "text-blue-700 dark:text-blue-400",
   pengajuan: "text-purple-700 dark:text-purple-400",
   sertifikat_selesai: "text-emerald-700 dark:text-emerald-400",
+  revisi: "text-pink-700 dark:text-pink-400",
 };
 
 const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
