@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, FolderOpen, FileText, Link2, TrendingUp, Eye, DollarSign, Wallet, Receipt, CreditCard, ArrowUpRight, ArrowDownRight, Clock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Users, FolderOpen, FileText, Link2, TrendingUp, Eye, DollarSign, Wallet, Receipt, CreditCard, ArrowUpRight, ArrowDownRight, Clock, CalendarIcon } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFieldAccess } from "@/hooks/useFieldAccess";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,8 @@ import {
   ResponsiveContainer, LabelList, CartesianGrid,
 } from "recharts";
 import type { Tables } from "@/integrations/supabase/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 type DataEntry = Tables<"data_entries">;
 
@@ -144,6 +146,9 @@ export default function Dashboard() {
 
   // Admin performance state (super_admin)
   const [adminPerformance, setAdminPerformance] = useState<{ name: string; email: string; role: string; count: number; sertifikat: number }[]>([]);
+  const [perfMonth, setPerfMonth] = useState<number>(new Date().getMonth()); // 0-11
+  const [perfYear, setPerfYear] = useState<number>(new Date().getFullYear());
+  const [perfFilterAll, setPerfFilterAll] = useState(true); // true = semua periode
 
   // Financial state (super_admin)
   const [financeStats, setFinanceStats] = useState({
@@ -240,9 +245,14 @@ export default function Dashboard() {
 
     const fetchAdminPerformance = async () => {
       if (role !== "super_admin") return;
-      // Get all entries with created_by
-      const { data: entries } = await supabase.from("data_entries").select("created_by, status");
-      if (!entries || entries.length === 0) return;
+      let query = supabase.from("data_entries").select("created_by, status, created_at");
+      if (!perfFilterAll) {
+        const startDate = new Date(perfYear, perfMonth, 1).toISOString();
+        const endDate = new Date(perfYear, perfMonth + 1, 1).toISOString();
+        query = query.gte("created_at", startDate).lt("created_at", endDate);
+      }
+      const { data: entries } = await query;
+      if (!entries || entries.length === 0) { setAdminPerformance([]); return; }
 
       const byUser: Record<string, { count: number; sertifikat: number }> = {};
       entries.forEach((e: any) => {
@@ -253,7 +263,7 @@ export default function Dashboard() {
       });
 
       const userIds = Object.keys(byUser);
-      if (userIds.length === 0) return;
+      if (userIds.length === 0) { setAdminPerformance([]); return; }
 
       const [profilesRes, rolesRes] = await Promise.all([
         supabase.from("profiles").select("id, full_name, email").in("id", userIds),
@@ -345,7 +355,7 @@ export default function Dashboard() {
     fetchRecentEntries();
     fetchFinancials();
     fetchAdminPerformance();
-  }, [role, user]);
+  }, [role, user, perfMonth, perfYear, perfFilterAll]);
 
   const cards = [
     { label: "Group Halal", value: stats.groups, icon: FolderOpen, show: true },
@@ -541,14 +551,59 @@ export default function Dashboard() {
           </div>
 
           {/* Admin Performance Ranking */}
-          {adminPerformance.length > 0 && (
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5" /> Ranking Kinerja Admin
+          </h2>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Button
+              variant={perfFilterAll ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPerfFilterAll(true)}
+            >
+              Semua Periode
+            </Button>
+            <Button
+              variant={!perfFilterAll ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPerfFilterAll(false)}
+            >
+              <CalendarIcon className="mr-1.5 h-3.5 w-3.5" /> Per Bulan
+            </Button>
+            {!perfFilterAll && (
+              <>
+                <Select value={String(perfMonth)} onValueChange={(v) => setPerfMonth(Number(v))}>
+                  <SelectTrigger className="w-[130px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"].map((m, i) => (
+                      <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={String(perfYear)} onValueChange={(v) => setPerfYear(Number(v))}>
+                  <SelectTrigger className="w-[90px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+          </div>
+          {adminPerformance.length > 0 ? (
             <div className="grid gap-6 lg:grid-cols-2 mb-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Users className="h-4 w-4" /> Ranking Kinerja Admin
+                    <TrendingUp className="h-4 w-4" /> Chart Ranking
                   </CardTitle>
-                  <CardDescription>Peringkat berdasarkan jumlah data yang diinput</CardDescription>
+                  <CardDescription>
+                    {perfFilterAll ? "Semua periode" : `${["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"][perfMonth]} ${perfYear}`} — Top 10
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ChartContainer config={{ count: { label: "Total Input", color: "hsl(var(--primary))" } }} className="max-h-[320px]">
@@ -609,6 +664,8 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4 text-center mb-6">Tidak ada data untuk periode ini</p>
           )}
         </>
       )}
