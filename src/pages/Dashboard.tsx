@@ -664,6 +664,8 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4 text-center mb-6">Tidak ada data untuk periode ini</p>
           )}
         </>
       )}
