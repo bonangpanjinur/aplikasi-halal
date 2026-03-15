@@ -243,9 +243,14 @@ export default function Dashboard() {
 
     const fetchAdminPerformance = async () => {
       if (role !== "super_admin") return;
-      // Get all entries with created_by
-      const { data: entries } = await supabase.from("data_entries").select("created_by, status");
-      if (!entries || entries.length === 0) return;
+      let query = supabase.from("data_entries").select("created_by, status, created_at");
+      if (!perfFilterAll) {
+        const startDate = new Date(perfYear, perfMonth, 1).toISOString();
+        const endDate = new Date(perfYear, perfMonth + 1, 1).toISOString();
+        query = query.gte("created_at", startDate).lt("created_at", endDate);
+      }
+      const { data: entries } = await query;
+      if (!entries || entries.length === 0) { setAdminPerformance([]); return; }
 
       const byUser: Record<string, { count: number; sertifikat: number }> = {};
       entries.forEach((e: any) => {
@@ -256,7 +261,7 @@ export default function Dashboard() {
       });
 
       const userIds = Object.keys(byUser);
-      if (userIds.length === 0) return;
+      if (userIds.length === 0) { setAdminPerformance([]); return; }
 
       const [profilesRes, rolesRes] = await Promise.all([
         supabase.from("profiles").select("id, full_name, email").in("id", userIds),
