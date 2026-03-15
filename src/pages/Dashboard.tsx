@@ -238,6 +238,46 @@ export default function Dashboard() {
       setRecentEntries(data ?? []);
     };
 
+    const fetchAdminPerformance = async () => {
+      if (role !== "super_admin") return;
+      // Get all entries with created_by
+      const { data: entries } = await supabase.from("data_entries").select("created_by, status");
+      if (!entries || entries.length === 0) return;
+
+      const byUser: Record<string, { count: number; sertifikat: number }> = {};
+      entries.forEach((e: any) => {
+        if (!e.created_by) return;
+        if (!byUser[e.created_by]) byUser[e.created_by] = { count: 0, sertifikat: 0 };
+        byUser[e.created_by].count++;
+        if (e.status === "sertifikat_selesai") byUser[e.created_by].sertifikat++;
+      });
+
+      const userIds = Object.keys(byUser);
+      if (userIds.length === 0) return;
+
+      const [profilesRes, rolesRes] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, email").in("id", userIds),
+        supabase.from("user_roles").select("user_id, role").in("user_id", userIds),
+      ]);
+
+      const profileMap: Record<string, { name: string; email: string }> = {};
+      (profilesRes.data ?? []).forEach((p: any) => {
+        profileMap[p.id] = { name: p.full_name || "", email: p.email || "" };
+      });
+      const roleMap: Record<string, string> = {};
+      (rolesRes.data ?? []).forEach((r: any) => { roleMap[r.user_id] = r.role; });
+
+      const result = userIds.map((uid) => ({
+        name: profileMap[uid]?.name || profileMap[uid]?.email || uid.slice(0, 8),
+        email: profileMap[uid]?.email || "",
+        role: roleMap[uid] || "unknown",
+        count: byUser[uid].count,
+        sertifikat: byUser[uid].sertifikat,
+      })).sort((a, b) => b.count - a.count);
+
+      setAdminPerformance(result);
+    };
+
     const fetchFinancials = async () => {
       if (role !== "super_admin") return;
 
@@ -304,6 +344,7 @@ export default function Dashboard() {
     fetchChartData();
     fetchRecentEntries();
     fetchFinancials();
+    fetchAdminPerformance();
   }, [role, user]);
 
   const cards = [
