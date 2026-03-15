@@ -593,6 +593,30 @@ export default function Dashboard() {
                 </Select>
               </>
             )}
+            {adminPerformance.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const MONTHS = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+                  const periodLabel = perfFilterAll ? "Semua Periode" : `${MONTHS[perfMonth]} ${perfYear}`;
+                  const header = "Ranking,Nama,Email,Role,Total Input,Sertifikat Selesai,Rate (%)";
+                  const rows = adminPerformance.map((p, i) =>
+                    `${i + 1},"${p.name}","${p.email}","${p.role}",${p.count},${p.sertifikat},${p.count > 0 ? Math.round((p.sertifikat / p.count) * 100) : 0}`
+                  );
+                  const csv = `Ranking Kinerja Admin - ${periodLabel}\n\n${header}\n${rows.join("\n")}`;
+                  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `ranking-admin-${perfFilterAll ? "semua" : `${perfYear}-${String(perfMonth + 1).padStart(2, "0")}`}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
+              </Button>
+            )}
           </div>
           {adminPerformance.length > 0 ? (
             <div className="grid gap-6 lg:grid-cols-2 mb-6">
