@@ -551,14 +551,59 @@ export default function Dashboard() {
           </div>
 
           {/* Admin Performance Ranking */}
-          {adminPerformance.length > 0 && (
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5" /> Ranking Kinerja Admin
+          </h2>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Button
+              variant={perfFilterAll ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPerfFilterAll(true)}
+            >
+              Semua Periode
+            </Button>
+            <Button
+              variant={!perfFilterAll ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPerfFilterAll(false)}
+            >
+              <CalendarIcon className="mr-1.5 h-3.5 w-3.5" /> Per Bulan
+            </Button>
+            {!perfFilterAll && (
+              <>
+                <Select value={String(perfMonth)} onValueChange={(v) => setPerfMonth(Number(v))}>
+                  <SelectTrigger className="w-[130px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"].map((m, i) => (
+                      <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={String(perfYear)} onValueChange={(v) => setPerfYear(Number(v))}>
+                  <SelectTrigger className="w-[90px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+          </div>
+          {adminPerformance.length > 0 ? (
             <div className="grid gap-6 lg:grid-cols-2 mb-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Users className="h-4 w-4" /> Ranking Kinerja Admin
+                    <TrendingUp className="h-4 w-4" /> Chart Ranking
                   </CardTitle>
-                  <CardDescription>Peringkat berdasarkan jumlah data yang diinput</CardDescription>
+                  <CardDescription>
+                    {perfFilterAll ? "Semua periode" : `${["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"][perfMonth]} ${perfYear}`} — Top 10
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ChartContainer config={{ count: { label: "Total Input", color: "hsl(var(--primary))" } }} className="max-h-[320px]">
