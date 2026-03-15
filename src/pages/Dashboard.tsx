@@ -144,6 +144,9 @@ export default function Dashboard() {
 
   // Admin performance state (super_admin)
   const [adminPerformance, setAdminPerformance] = useState<{ name: string; email: string; role: string; count: number; sertifikat: number }[]>([]);
+  const [perfMonth, setPerfMonth] = useState<number>(new Date().getMonth()); // 0-11
+  const [perfYear, setPerfYear] = useState<number>(new Date().getFullYear());
+  const [perfFilterAll, setPerfFilterAll] = useState(true); // true = semua periode
 
   // Financial state (super_admin)
   const [financeStats, setFinanceStats] = useState({
