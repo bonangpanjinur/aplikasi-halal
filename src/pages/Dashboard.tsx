@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, FolderOpen, FileText, Link2, TrendingUp, Eye, DollarSign, Wallet, Receipt, CreditCard, ArrowUpRight, ArrowDownRight, Clock, CalendarIcon } from "lucide-react";
+import { Users, FolderOpen, FileText, Link2, TrendingUp, Eye, DollarSign, Wallet, Receipt, CreditCard, ArrowUpRight, ArrowDownRight, Clock, CalendarIcon, Download } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFieldAccess } from "@/hooks/useFieldAccess";
