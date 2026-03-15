@@ -142,6 +142,9 @@ export default function Dashboard() {
   const [groupData, setGroupData] = useState<GroupStat[]>([]);
   const [recentEntries, setRecentEntries] = useState<DataEntry[]>([]);
 
+  // Admin performance state (super_admin)
+  const [adminPerformance, setAdminPerformance] = useState<{ name: string; email: string; role: string; count: number; sertifikat: number }[]>([]);
+
   // Financial state (super_admin)
   const [financeStats, setFinanceStats] = useState({
     totalBilling: 0,
