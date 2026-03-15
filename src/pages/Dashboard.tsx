@@ -539,6 +539,77 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Admin Performance Ranking */}
+          {adminPerformance.length > 0 && (
+            <div className="grid gap-6 lg:grid-cols-2 mb-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Ranking Kinerja Admin
+                  </CardTitle>
+                  <CardDescription>Peringkat berdasarkan jumlah data yang diinput</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={{ count: { label: "Total Input", color: "hsl(var(--primary))" } }} className="max-h-[320px]">
+                    <BarChart data={adminPerformance.slice(0, 10)} layout="vertical" margin={{ left: 10, right: 40 }}>
+                      <CartesianGrid horizontal={false} className="stroke-muted" />
+                      <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                      <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]}>
+                        <LabelList dataKey="count" position="right" style={{ fontSize: 12, fontWeight: 600, fill: "hsl(var(--foreground))" }} />
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" /> Detail Kinerja Per User
+                  </CardTitle>
+                  <CardDescription>Total input & sertifikat selesai per user</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10">#</TableHead>
+                          <TableHead>Nama</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead className="text-right">Input</TableHead>
+                          <TableHead className="text-right">Sertifikat</TableHead>
+                          <TableHead className="text-right">Rate</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {adminPerformance.slice(0, 15).map((p, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-bold text-muted-foreground">{i + 1}</TableCell>
+                            <TableCell>
+                              <div className="text-sm font-medium">{p.name || p.email}</div>
+                              {p.name && <div className="text-xs text-muted-foreground">{p.email}</div>}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize text-xs">{p.role.replace("_", " ")}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">{p.count}</TableCell>
+                            <TableCell className="text-right font-semibold">{p.sertifikat}</TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground">
+                              {p.count > 0 ? Math.round((p.sertifikat / p.count) * 100) : 0}%
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </>
       )}
 
