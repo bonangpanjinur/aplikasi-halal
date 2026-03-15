@@ -353,7 +353,7 @@ export default function Dashboard() {
     fetchRecentEntries();
     fetchFinancials();
     fetchAdminPerformance();
-  }, [role, user]);
+  }, [role, user, perfMonth, perfYear, perfFilterAll]);
 
   const cards = [
     { label: "Group Halal", value: stats.groups, icon: FolderOpen, show: true },
