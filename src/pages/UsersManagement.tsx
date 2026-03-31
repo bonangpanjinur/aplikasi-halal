@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, UserCog } from "lucide-react";
+import { Plus, Trash2, UserCog, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -41,12 +41,27 @@ export default function UsersManagement() {
   const [editOpen, setEditOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const isOwner = myRole === "owner";
   const isSuperAdmin = myRole === "super_admin";
 
   const assignableRoles: AppRole[] = isOwner
     ? ["admin", "admin_input", "lapangan", "nib", "umkm"]
     : ["admin", "admin_input", "lapangan", "nib", "umkm", "owner"];
+
+  // Pagination calculations
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = users.slice(startIndex, endIndex);
+
+  // Reset to first page when users change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [users]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -281,7 +296,7 @@ export default function UsersManagement() {
                   </TableCell>
                 </TableRow>
               ) : (
-                users.map((u) => (
+                paginatedUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">
                       {u.full_name || (u.profileSynced ? "-" : <span className="text-muted-foreground italic text-xs">Belum sinkron</span>)}
@@ -337,6 +352,44 @@ export default function UsersManagement() {
               )}
             </TableBody>
           </Table>
+          {users.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <div className="text-sm text-muted-foreground">
+                Menampilkan {startIndex + 1}-{Math.min(endIndex, users.length)} dari {users.length} user
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="w-8 h-8 p-0"
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

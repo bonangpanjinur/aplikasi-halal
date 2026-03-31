@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import { useFormAutoSave } from "@/hooks/useFormAutoSave";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldAccess } from "@/hooks/useFieldAccess";
@@ -94,6 +95,11 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const { canEdit: canEditField, loading: accessLoading } = useFieldAccess(isPublic ? "lapangan" : undefined);
   const isAdmin = role === "super_admin" || role === "admin";
 
+  const formAutoSaveKey = `form_autosave_${groupId}_${entry?.id || 'new'}`;
+  const { loadFormData, clearFormData } = useFormAutoSave(formAutoSaveKey, {}, 2000);
+
+  // Load auto-saved data on mount
+  const [isInitialized, setIsInitialized] = useState(false);
   const [nama, setNama] = useState(entry?.nama ?? "");
   const [alamat, setAlamat] = useState(entry?.alamat ?? "");
   const [nomorHp, setNomorHp] = useState(entry?.nomor_hp ?? "");
@@ -141,6 +147,31 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         });
     }
   }, [entry?.id]);
+
+  // Load auto-saved form data on mount (for new entries only)
+  useEffect(() => {
+    if (!isInitialized && !entry && isPublic) {
+      const savedData = loadFormData();
+      if (savedData) {
+        if (savedData.nama) setNama(savedData.nama);
+        if (savedData.alamat) setAlamat(savedData.alamat);
+        if (savedData.nomorHp) setNomorHp(savedData.nomorHp);
+        if (savedData.email) setEmail(savedData.email);
+      }
+      setIsInitialized(true);
+    }
+  }, [isInitialized, entry, isPublic, loadFormData]);
+
+  // Auto-save form data to localStorage
+  useEffect(() => {
+    if (!isPublic || entry) return; // Only auto-save for public forms on new entries
+    const formData = { nama, alamat, nomorHp, email };
+    try {
+      localStorage.setItem(formAutoSaveKey, JSON.stringify(formData));
+    } catch (error) {
+      console.error("Failed to auto-save form data:", error);
+    }
+  }, [nama, alamat, nomorHp, email, isPublic, entry, formAutoSaveKey]);
 
   const validateFile = (file: File): boolean => {
     if (file.size > MAX_FILE_SIZE) {
@@ -327,6 +358,10 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
       toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Berhasil disimpan" });
+      // Clear auto-saved data on successful save
+      if (isPublic && !entry) {
+        clearFormData();
+      }
       onSaved(resultData?.tracking_code);
     }
     setSaving(false);
