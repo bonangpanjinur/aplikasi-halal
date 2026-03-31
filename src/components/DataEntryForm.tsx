@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { Camera, Upload, MapPin, ArrowLeft, X, Image as ImageIcon, Plus } from "lucide-react";
 import ImageLightbox from "@/components/ImageLightbox";
 import type { Tables } from "@/integrations/supabase/types";
+import { z } from "zod";
 
 type DataEntry = Tables<"data_entries">;
 
@@ -30,6 +31,15 @@ interface Props {
   sharedLinkUserId?: string;
   sourceLinkId?: string;
 }
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+const formSchema = z.object({
+  nama: z.string().min(3, "Nama minimal 3 karakter"),
+  alamat: z.string().min(5, "Alamat minimal 5 karakter"),
+  nomor_hp: z.string().min(10, "Nomor HP minimal 10 digit"),
+});
 
 function ImagePreview({ file, existingUrl, onRemoveFile }: { file: File | null; existingUrl?: string | null; onRemoveFile: () => void }) {
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
@@ -132,6 +142,18 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     }
   }, [entry?.id]);
 
+  const validateFile = (file: File): boolean => {
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: "File terlalu besar", description: "Maksimal ukuran file adalah 2MB", variant: "destructive" });
+      return false;
+    }
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type) && !file.name.endsWith(".pdf")) {
+      toast({ title: "Format file tidak didukung", description: "Gunakan JPG, PNG, atau PDF", variant: "destructive" });
+      return false;
+    }
+    return true;
+  };
+
   const uploadFile = async (file: File, bucket: string): Promise<string | null> => {
     const ext = file.name.split(".").pop();
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -151,7 +173,11 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true })
       );
       const { latitude, longitude } = pos.coords;
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
+        headers: {
+          'User-Agent': 'HalalTrack-App/1.0 (contact@halaltrack.id)'
+        }
+      });
       const data = await res.json();
       setAlamat(data.display_name || `${latitude}, ${longitude}`);
     } catch {
@@ -161,7 +187,38 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   };
 
   const handleSave = async () => {
+    // 1. Client-side validation
+    const validation = formSchema.safeParse({ nama, alamat, nomor_hp: nomorHp });
+    if (!validation.success) {
+      toast({ 
+        title: "Validasi Gagal", 
+        description: validation.error.errors[0].message, 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setSaving(true);
+
+    // 2. Duplicate check (only for new entries)
+    if (!entry) {
+      const { data: existing, error: checkError } = await supabase
+        .from("data_entries")
+        .select("id")
+        .eq("nama", nama)
+        .eq("nomor_hp", nomorHp)
+        .maybeSingle();
+      
+      if (existing) {
+        toast({ 
+          title: "Duplikasi Data", 
+          description: "Data dengan nama dan nomor HP ini sudah terdaftar.", 
+          variant: "destructive" 
+        });
+        setSaving(false);
+        return;
+      }
+    }
 
     let ktp_url = entry?.ktp_url ?? null;
     let nib_url = entry?.nib_url ?? null;
@@ -256,81 +313,122 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
             }
           }
         }
-
-        // Update entry with first photo URLs for backward compat
+        // Update first photo URLs
         if (firstProdukUrl || firstVerifikasiUrl) {
-          const updatePayload: Record<string, unknown> = {};
-          if (firstProdukUrl) updatePayload.foto_produk_url = firstProdukUrl;
-          if (firstVerifikasiUrl) updatePayload.foto_verifikasi_url = firstVerifikasiUrl;
-          await supabase.from("data_entries").update(updatePayload).eq("id", entryId);
+          await supabase.from("data_entries").update({
+            foto_produk_url: firstProdukUrl,
+            foto_verifikasi_url: firstVerifikasiUrl
+          }).eq("id", entryId);
         }
       }
     }
 
-    setSaving(false);
     if (error) {
       toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: entry ? "Data diperbarui" : "Data disimpan" });
+      toast({ title: "Berhasil disimpan" });
       onSaved(resultData?.tracking_code);
     }
-  };
-
-  const clearFile = (setter: (f: File | null) => void, ...refs: React.RefObject<HTMLInputElement | null>[]) => {
-    setter(null);
-    refs.forEach((r) => { if (r.current) r.current.value = ""; });
+    setSaving(false);
   };
 
   const addProdukFile = (file: File | null) => {
-    if (file) setProdukFiles((prev) => [...prev, file]);
+    if (file && validateFile(file)) setProdukFiles([...produkFiles, file]);
   };
-
   const removeProdukFile = (index: number) => {
-    setProdukFiles((prev) => prev.filter((_, i) => i !== index));
+    setProdukFiles(produkFiles.filter((_, i) => i !== index));
   };
-
   const addVerifikasiFile = (file: File | null) => {
-    if (file) setVerifikasiFiles((prev) => [...prev, file]);
+    if (file && validateFile(file)) setVerifikasiFiles([...verifikasiFiles, file]);
   };
-
   const removeVerifikasiFile = (index: number) => {
-    setVerifikasiFiles((prev) => prev.filter((_, i) => i !== index));
+    setVerifikasiFiles(verifikasiFiles.filter((_, i) => i !== index));
+  };
+  const markPhotoForDeletion = (id: string) => {
+    setPhotosToDelete([...photosToDelete, id]);
   };
 
-  const markPhotoForDeletion = (photoId: string) => {
-    setPhotosToDelete((prev) => [...prev, photoId]);
+  const clearFile = (setter: (f: File | null) => void, ref: React.RefObject<HTMLInputElement>) => {
+    setter(null);
+    if (ref.current) ref.current.value = "";
   };
 
-  if (accessLoading) {
-    return <div className="text-muted-foreground text-center py-8">Memuat form...</div>;
-  }
+  if (accessLoading) return <div className="p-8 text-center">Memuat hak akses...</div>;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          {!isPublic && (
-            <Button variant="ghost" size="icon" onClick={onCancel}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          )}
-          <CardTitle className="text-lg">{entry ? "Edit Data" : "Tambah Data Baru"}</CardTitle>
-        </div>
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>{entry ? "Edit Data" : "Input Data Baru"}</CardTitle>
+        {!isPublic && (
+          <Button variant="ghost" size="icon" onClick={onCancel}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {canEditField("nama") && (
           <div className="space-y-2">
-            <Label>Nama</Label>
-            <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Nama lengkap" />
+            <Label htmlFor="nama">Nama Lengkap / Nama Usaha</Label>
+            <Input id="nama" value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Masukkan nama" />
           </div>
         )}
 
+        {canEditField("alamat") && (
+          <div className="space-y-2">
+            <Label htmlFor="alamat">Alamat Lengkap</Label>
+            <div className="flex gap-2">
+              <Input id="alamat" value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Masukkan alamat" />
+              <Button type="button" variant="outline" size="icon" onClick={getLocation} disabled={gettingLocation}>
+                <MapPin className={`h-4 w-4 ${gettingLocation ? "animate-pulse" : ""}`} />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {canEditField("nomor_hp") && (
+          <div className="space-y-2">
+            <Label htmlFor="nomor_hp">Nomor HP / WhatsApp</Label>
+            <Input id="nomor_hp" value={nomorHp} onChange={(e) => setNomorHp(e.target.value)} placeholder="Contoh: 08123456789" />
+          </div>
+        )}
+
+        {canEditField("email") && (
+          <div className="space-y-2">
+            <Label htmlFor="email">Email (Opsional)</Label>
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@contoh.com" />
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="kata_sandi">Kata Sandi Akun</Label>
+              <Input id="kata_sandi" value={kataSandi} onChange={(e) => setKataSandi(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email_halal">Email SIHALAL</Label>
+              <Input id="email_halal" value={emailHalal} onChange={(e) => setEmailHalal(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sandi_halal">Sandi SIHALAL</Label>
+              <Input id="sandi_halal" value={sandiHalal} onChange={(e) => setSandiHalal(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email_nib">Email OSS/NIB</Label>
+              <Input id="email_nib" value={emailNib} onChange={(e) => setEmailNib(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sandi_nib">Sandi OSS/NIB</Label>
+              <Input id="sandi_nib" value={sandiNib} onChange={(e) => setSandiNib(e.target.value)} />
+            </div>
+          </div>
+        )}
 
         {canEditField("ktp") && (
           <div className="space-y-2">
             <Label>Foto KTP</Label>
-            <input ref={ktpFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setKtpFile(e.target.files?.[0] ?? null)} />
-            <input ref={ktpCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setKtpFile(e.target.files?.[0] ?? null)} />
+            <input ref={ktpFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0] ?? null; if (f && validateFile(f)) setKtpFile(f); }} />
+            <input ref={ktpCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0] ?? null; if (f && validateFile(f)) setKtpFile(f); }} />
             <div className="flex gap-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => ktpFileRef.current?.click()}>
                 <Upload className="mr-2 h-4 w-4" /> Pilih File
@@ -339,76 +437,14 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
                 <Camera className="h-4 w-4" />
               </Button>
             </div>
-            <ImagePreview file={ktpFile} existingUrl={entry?.ktp_url} onRemoveFile={() => clearFile(setKtpFile, ktpFileRef, ktpCameraRef)} />
-          </div>
-        )}
-
-        {canEditField("alamat") && (
-          <div className="space-y-2">
-            <Label>Alamat</Label>
-            <p className="text-xs text-muted-foreground">Ketik manual atau tekan ikon lokasi untuk ambil otomatis</p>
-            <div className="flex gap-2">
-              <Input value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Ketik alamat..." className="flex-1" />
-              <Button type="button" variant="outline" size="icon" onClick={getLocation} disabled={gettingLocation}>
-                <MapPin className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {canEditField("nomor_hp") && (
-          <div className="space-y-2">
-            <Label>Nomor HP</Label>
-            <Input value={nomorHp} onChange={(e) => setNomorHp(e.target.value)} placeholder="08xxxxxxxxxx" />
-          </div>
-        )}
-
-        {canEditField("email") && (
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contoh@email.com" />
-          </div>
-        )}
-
-        {canEditField("kata_sandi") && (
-          <div className="space-y-2">
-            <Label>Kata Sandi</Label>
-            <Input value={kataSandi} onChange={(e) => setKataSandi(e.target.value)} placeholder="Kata sandi akun" />
-          </div>
-        )}
-
-        {canEditField("email_halal") && (
-          <div className="space-y-2">
-            <Label>Email Halal</Label>
-            <Input type="email" value={emailHalal} onChange={(e) => setEmailHalal(e.target.value)} placeholder="Email akun halal" />
-          </div>
-        )}
-
-        {canEditField("sandi_halal") && (
-          <div className="space-y-2">
-            <Label>Sandi Halal</Label>
-            <Input value={sandiHalal} onChange={(e) => setSandiHalal(e.target.value)} placeholder="Sandi akun halal" />
-          </div>
-        )}
-
-        {canEditField("email_nib") && (
-          <div className="space-y-2">
-            <Label>Email NIB</Label>
-            <Input type="email" value={emailNib} onChange={(e) => setEmailNib(e.target.value)} placeholder="Email akun NIB" />
-          </div>
-        )}
-
-        {canEditField("sandi_nib") && (
-          <div className="space-y-2">
-            <Label>Sandi NIB</Label>
-            <Input value={sandiNib} onChange={(e) => setSandiNib(e.target.value)} placeholder="Sandi akun NIB" />
+            <ImagePreview file={ktpFile} existingUrl={entry?.ktp_url} onRemoveFile={() => clearFile(setKtpFile, ktpFileRef)} />
           </div>
         )}
 
         {canEditField("nib") && (
           <div className="space-y-2">
-            <Label>NIB (PDF / Foto)</Label>
-            <input ref={nibFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setNibFile(e.target.files?.[0] ?? null)} />
+            <Label>Dokumen NIB (PDF / Foto)</Label>
+            <input ref={nibFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0] ?? null; if (f && validateFile(f)) setNibFile(f); }} />
             <Button type="button" variant="outline" className="w-full" onClick={() => nibFileRef.current?.click()}>
               <Upload className="mr-2 h-4 w-4" /> Pilih File NIB
             </Button>
@@ -422,10 +458,8 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
                   <X className="h-3 w-3" />
                 </Button>
               </div>
-            ) : entry?.nib_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-              <ImagePreview file={null} existingUrl={entry.nib_url} onRemoveFile={() => {}} />
             ) : entry?.nib_url ? (
-              <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>
+              <p className="text-xs text-muted-foreground">NIB sudah diupload ✓</p>
             ) : null}
           </div>
         )}
@@ -485,7 +519,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         {canEditField("sertifikat") && (
           <div className="space-y-2">
             <Label>Sertifikat Halal (PDF / Foto)</Label>
-            <input ref={sertifikatFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setSertifikatFile(e.target.files?.[0] ?? null)} />
+            <input ref={sertifikatFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0] ?? null; if (f && validateFile(f)) setSertifikatFile(f); }} />
             <Button type="button" variant="outline" className="w-full" onClick={() => sertifikatFileRef.current?.click()}>
               <Upload className="mr-2 h-4 w-4" /> Pilih File Sertifikat
             </Button>
